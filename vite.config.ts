@@ -5,6 +5,10 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Forcer le format ES pour les Web Workers (évite erreur Rollup: worker.format iife non supporté avec code-splitting)
+  worker: {
+    format: 'es'
+  },
   plugins: [
     react(),
     VitePWA({
