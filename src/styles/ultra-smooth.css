@@ -1,0 +1,313 @@
+/* 🚀 OPTIMISATIONS ULTRA-FLUIDES 120FPS */
+
+/* Variables pour timing ultra-smooth */
+:root {
+  /* Timing functions optimisées pour 120fps */
+  --timing-ultra-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --timing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --timing-elastic: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  
+  /* Durées optimisées */
+  --duration-instant: 0.08s;
+  --duration-fast: 0.15s;
+  --duration-normal: 0.25s;
+  --duration-slow: 0.35s;
+}
+
+/* 🎯 OPTIMISATIONS GLOBALES HARDWARE ACCELERATION */
+.ultra-smooth {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, opacity, box-shadow;
+  -webkit-backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+}
+
+/* 🔥 BOUTONS ULTRA-FLUIDES */
+.btn-ultra-smooth {
+  transform: translateZ(0) scale(1);
+  backface-visibility: hidden;
+  will-change: transform, box-shadow, opacity, background;
+  transition: all var(--duration-fast) var(--timing-ultra-smooth);
+  -webkit-tap-highlight-color: transparent;
+  contain: layout style;
+  isolation: isolate;
+}
+
+.btn-ultra-smooth:hover {
+  transform: translateZ(0) scale(1.02) translateY(-1px);
+  transition-duration: var(--duration-fast);
+  transition-timing-function: var(--timing-ultra-smooth);
+}
+
+.btn-ultra-smooth:active {
+  transform: translateZ(0) scale(0.98) translateY(0px);
+  transition-duration: var(--duration-instant);
+}
+
+.btn-ultra-smooth:focus {
+  transform: translateZ(0) scale(1.01);
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 2px;
+}
+
+/* 🎴 CARTES 3D ULTRA-FLUIDES */
+.card-3d-ultra {
+  transform: translateZ(0);
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform, box-shadow, opacity;
+  perspective: 2000px;
+  contain: layout style;
+  transition: all var(--duration-normal) var(--timing-ultra-smooth);
+}
+
+.card-3d-ultra:hover {
+  transform: translateZ(0) translateY(-4px) scale(1.01);
+  transition: all var(--duration-normal) var(--timing-ultra-smooth);
+}
+
+/* 📱 LIENS ET ÉLÉMENTS INTERACTIFS */
+.interactive-ultra {
+  transform: translateZ(0);
+  will-change: transform, color, opacity;
+  transition: all var(--duration-fast) var(--timing-ultra-smooth);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.interactive-ultra:hover {
+  transform: translateZ(0) scale(1.01);
+}
+
+/* 📝 INPUTS OPTIMISÉS */
+.input-ultra-smooth {
+  transform: translateZ(0);
+  will-change: transform, border-color, box-shadow;
+  transition: all var(--duration-normal) var(--timing-ultra-smooth);
+  backface-visibility: hidden;
+}
+
+.input-ultra-smooth:focus {
+  transform: translateZ(0) scale(1.01);
+}
+
+/* 🌊 ANIMATIONS GLOBALES OPTIMISÉES */
+@keyframes fadeInUltraSmooth {
+  from { 
+    opacity: 0; 
+    transform: translateZ(0) translateY(10px);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateZ(0) translateY(0);
+  }
+}
+
+@keyframes slideInUltraSmooth {
+  from { 
+    opacity: 0; 
+    transform: translateZ(0) translateX(-20px);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateZ(0) translateX(0);
+  }
+}
+
+@keyframes scaleInUltraSmooth {
+  from { 
+    opacity: 0; 
+    transform: translateZ(0) scale(0.9);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateZ(0) scale(1);
+  }
+}
+
+@keyframes pulse120fps {
+  0%, 100% { 
+    opacity: 1; 
+    transform: translateZ(0) scale(1);
+  }
+  50% { 
+    opacity: 0.8; 
+    transform: translateZ(0) scale(1.02);
+  }
+}
+
+@keyframes shimmer120fps {
+  0% { 
+    transform: translateZ(0) translateX(-100%);
+  }
+  100% { 
+    transform: translateZ(0) translateX(100%);
+  }
+}
+
+/* 🎨 CLASSES UTILITAIRES ULTRA-FLUIDES */
+.animate-fade-in-ultra {
+  animation: fadeInUltraSmooth var(--duration-normal) var(--timing-ultra-smooth) forwards;
+}
+
+.animate-slide-in-ultra {
+  animation: slideInUltraSmooth var(--duration-normal) var(--timing-ultra-smooth) forwards;
+}
+
+.animate-scale-in-ultra {
+  animation: scaleInUltraSmooth var(--duration-normal) var(--timing-ultra-smooth) forwards;
+}
+
+.animate-pulse-ultra {
+  animation: pulse120fps 2s var(--timing-ultra-smooth) infinite;
+}
+
+.animate-shimmer-ultra {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shimmer-ultra::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  animation: shimmer120fps 2s var(--timing-ultra-smooth) infinite;
+}
+
+/* 📱 SCROLLING ULTRA-SMOOTH */
+.scroll-ultra-smooth {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  will-change: scroll-position;
+  overscroll-behavior: contain;
+}
+
+/* 🎯 NAVIGATION OPTIMISÉE */
+.nav-item-ultra {
+  transform: translateZ(0);
+  will-change: transform, background, color;
+  transition: all var(--duration-fast) var(--timing-ultra-smooth);
+  backface-visibility: hidden;
+}
+
+.nav-item-ultra:hover {
+  transform: translateZ(0) translateX(2px) scale(1.01);
+}
+
+/* 🌟 EFFETS SPÉCIAUX ULTRA-FLUIDES */
+.glow-ultra {
+  position: relative;
+  overflow: hidden;
+}
+
+.glow-ultra::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  transform: translateZ(0) scale(0);
+  transition: transform var(--duration-normal) var(--timing-elastic);
+}
+
+.glow-ultra:hover::after {
+  transform: translateZ(0) scale(1);
+}
+
+/* 🎮 BOUTONS DE JEU ULTRA-RESPONSIFS */
+.game-btn-ultra {
+  transform: translateZ(0) scale(1);
+  will-change: transform, box-shadow, background;
+  transition: all var(--duration-instant) var(--timing-ultra-smooth);
+  backface-visibility: hidden;
+  contain: layout style;
+}
+
+.game-btn-ultra:hover {
+  transform: translateZ(0) scale(1.05) translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.game-btn-ultra:active {
+  transform: translateZ(0) scale(0.95) translateY(1px);
+  transition-duration: var(--duration-instant);
+}
+
+/* 🎨 MODE SOMBRE OPTIMISÉ */
+.dark .ultra-smooth,
+.dark .btn-ultra-smooth,
+.dark .card-3d-ultra,
+.dark .interactive-ultra,
+.dark .input-ultra-smooth,
+.dark .nav-item-ultra,
+.dark .game-btn-ultra {
+  color-scheme: dark;
+}
+
+/* 📱 RESPONSIVE ULTRA-FLUIDE */
+@media (max-width: 768px) {
+  .btn-ultra-smooth,
+  .card-3d-ultra,
+  .interactive-ultra {
+    transition-duration: var(--duration-instant);
+  }
+  
+  .card-3d-ultra:hover {
+    transform: translateZ(0) translateY(-2px) scale(1.005);
+  }
+}
+
+/* 🚀 PRÉFÉRENCES DE MOUVEMENT */
+@media (prefers-reduced-motion: no-preference) {
+  * {
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--timing-ultra-smooth);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  .ultra-smooth,
+  .btn-ultra-smooth,
+  .card-3d-ultra,
+  .interactive-ultra,
+  .input-ultra-smooth,
+  .nav-item-ultra,
+  .game-btn-ultra {
+    transform: none !important;
+    will-change: auto !important;
+  }
+}
+
+/* 🔧 HARDWARE ACCELERATION FORCÉE */
+.force-gpu-acceleration {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  -webkit-perspective: 1000;
+  perspective: 1000;
+  will-change: transform;
+}
+
+/* 🎯 PERFORMANCE DEBUG (à supprimer en production) */
+.debug-performance * {
+  outline: 1px solid rgba(255, 0, 0, 0.1) !important;
+}
+
+.debug-performance .ultra-smooth {
+  outline-color: rgba(0, 255, 0, 0.3) !important;
+}
+
+.debug-performance .btn-ultra-smooth {
+  outline-color: rgba(0, 0, 255, 0.3) !important;
+}

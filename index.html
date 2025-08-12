@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Application de cartes flash ultra-performante avec Tauri" />
+    <meta name="keywords" content="flashcards, apprentissage, répétition espacée, mémorisation, tauri" />
+    <meta name="author" content="Alox92" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#3b82f6" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <title>Cards</title>
+    
+    <!-- Optimisations Performance -->
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        overflow-x: hidden;
+      }
+      
+      /* Loading spinner ultra-smooth */
+      .loading-spinner {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 50px;
+        height: 50px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: translate(-50%, -50%) rotate(0deg); }
+        100% { transform: translate(-50%, -50%) rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="loading-spinner"></div>
+      <div style="position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px;">
+        <div>🔧 Debug Info:</div>
+        <div id="debug-status">Chargement...</div>
+      </div>
+    </div>
+    <script>
+      console.log('🔧 HTML chargé, début du diagnostic...')
+      document.getElementById('debug-status').innerHTML = 'HTML chargé ✅'
+      
+      // Test si React se charge
+      setTimeout(() => {
+        if (document.querySelector('.loading-spinner')) {
+          console.error('❌ React ne s\'est pas chargé après 3 secondes')
+          document.getElementById('debug-status').innerHTML = 'React timeout ❌'
+        }
+      }, 3000)
+    </script>
+  <!-- Point d'entrée application complète -->
+  <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
