@@ -1,10 +1,10 @@
-# Copilot Instructions pour Ariba Flashcards
+# Copilot Instructions pour Cards
 
 <!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
 
 ## 🎯 Contexte du Projet
 
-Ariba Flashcards est une application de cartes flash intelligente migrée de Flutter vers React TypeScript. L'application implémente 7 systèmes d'optimisation révolutionnaires pour l'apprentissage adaptatif.
+Cards est une application de cartes flash intelligente migrée de Flutter vers React TypeScript. L'application implémente 7 systèmes d'optimisation pour l'apprentissage adaptatif.
 
 ## 🏗️ Architecture
 
@@ -105,4 +105,4 @@ Le projet suit les principes de Clean Architecture avec les couches suivantes :
 - Memory leak prevention
 - Performance monitoring avec Web APIs
 
-Suivez ces instructions pour maintenir la cohérence et la qualité du code dans le projet Ariba Flashcards.
+Suivez ces instructions pour maintenir la cohérence et la qualité du code dans le projet Cards.

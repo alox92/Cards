@@ -467,7 +467,7 @@ const SettingsPage = () => {
               const url = URL.createObjectURL(blob)
               const a = document.createElement('a')
               a.href = url
-              a.download = `ariba-settings-${new Date().toISOString().split('T')[0]}.json`
+              a.download = `cards-settings-${new Date().toISOString().split('T')[0]}.json`
               a.click()
               URL.revokeObjectURL(url)
             }}
@@ -504,7 +504,7 @@ const SettingsPage = () => {
   const renderAboutSettings = () => (
     <div className="space-y-6">
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Ariba Flashcards</h3>
+  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Cards</h3>
         <div className="space-y-3">
           <div className="flex justify-between">
             <span className="text-gray-600 dark:text-gray-400">Version :</span>

@@ -1,5 +1,5 @@
 /**
- * 🦀 ARIBA TAURI NATIVE APIS
+ * 🦀 CARDS TAURI NATIVE APIS
  * 
  * Wrapper TypeScript pour les APIs Rust ultra-performantes
  * Performance native 10x supérieure aux APIs web standards
@@ -207,7 +207,7 @@ export class AdaptivePerformanceAPI {
       
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'ariba-deck.json';
+  link.download = 'cards-deck.json';
       link.click();
       
       return 'Export web réussi';
@@ -220,7 +220,7 @@ export class AdaptivePerformanceAPI {
     } else {
       // Fallback web notification
       if ('Notification' in window) {
-        new Notification('Ariba Flashcards', { body: message });
+  new Notification('Cards', { body: message });
       }
     }
   }

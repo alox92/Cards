@@ -48,7 +48,7 @@ export function useServiceStudySession({ deckId, dailyNewLimit = 15 }: Options):
         performance: { accuracy: 0, speed: 0, consistency: 0, improvement: 0, streak: 0 }
       }
       setFinished(false)
-      try { localStorage.setItem(`ariba.activeSession.${deckId}`, JSON.stringify({ session: sessionRef.current, queue: q.map(c=>c.id) })) } catch { /* ignore */ }
+  try { localStorage.setItem(`cards.activeSession.${deckId}`, JSON.stringify({ session: sessionRef.current, queue: q.map(c=>c.id) })) } catch { /* ignore */ }
     } catch(e:any){ setError(e.message || 'Erreur construction session') }
     finally { setLoading(false) }
   }, [deckId, dailyNewLimit, service])
@@ -57,7 +57,7 @@ export function useServiceStudySession({ deckId, dailyNewLimit = 15 }: Options):
   const resume = useCallback(async () => {
   if(!deckId) return
     try {
-      const raw = localStorage.getItem(`ariba.activeSession.${deckId}`)
+  const raw = localStorage.getItem(`cards.activeSession.${deckId}`)
       if(!raw) return
       const parsed = JSON.parse(raw) as { session: StudySession; queue: string[] }
       // reconstruire les cartes
@@ -94,7 +94,7 @@ export function useServiceStudySession({ deckId, dailyNewLimit = 15 }: Options):
       setQueue(q => {
         const next = q.filter(c => c.id !== current.id)
         if(sessionRef.current){
-          try { localStorage.setItem(`ariba.activeSession.${deckId}`, JSON.stringify({ session: sessionRef.current, queue: next.map(c=>c.id) })) } catch { /* ignore */ }
+          try { localStorage.setItem(`cards.activeSession.${deckId}`, JSON.stringify({ session: sessionRef.current, queue: next.map(c=>c.id) })) } catch { /* ignore */ }
         }
         return next
       })
@@ -104,7 +104,7 @@ export function useServiceStudySession({ deckId, dailyNewLimit = 15 }: Options):
           const completed = await service.endSession(sessionRef.current)
           sessionRef.current = completed
           setFinished(true)
-          try { localStorage.removeItem(`ariba.activeSession.${deckId}`) } catch { /* ignore */ }
+          try { localStorage.removeItem(`cards.activeSession.${deckId}`) } catch { /* ignore */ }
         }
       }
     } catch(e:any){ setError(e.message || 'Erreur réponse') }

@@ -1,6 +1,6 @@
 # 🧭 Guide de Performance & Observabilité
 
-Ce document décrit l'activation et la personnalisation des systèmes de monitoring, de logging avancé et des budgets de performance d'Ariba Flashcards.
+Ce document décrit l'activation et la personnalisation des systèmes de monitoring, de logging avancé et des budgets de performance de Cards.
 
 ## 🔌 Activation des Diagnostics
 

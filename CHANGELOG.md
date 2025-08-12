@@ -1,4 +1,4 @@
-# 📦 Changelog - Ariba Flashcards
+# 📦 Changelog - Cards
 
 Toutes les évolutions notables du projet. Format inspiré de Keep a Changelog.
 
@@ -20,11 +20,11 @@ Toutes les évolutions notables du projet. Format inspiré de Keep a Changelog.
 
 ## [1.1.0] - 2025-08-11
 ### Ajouté
-- Reprise automatique des sessions d'étude (persistées par deck `ariba.activeSession.{deckId}`)
+- Reprise automatique des sessions d'étude (persistées par deck `cards.activeSession.{deckId}`)
 - Timer d'étude temps réel (rendu via `requestAnimationFrame`)
 - Raccourcis clavier en session: `Space` flip, `0–4` qualité SM‑2
 - Flip 3D des cartes: profondeur (`card3DDepth`) & vitesse (`cardFlipSpeedMs`) configurables
-- Mode Focus persistant (`ariba-focus-mode`): masque navigation + barre de recherche
+- Mode Focus persistant (`cards-focus-mode`): masque navigation + barre de recherche
 - Génération dynamique de palette **HSL** (variables `--accent-100..900` + `--accent-h/s/l`)
 - Presets de thèmes: Solarized / Nord / Dracula / Gruvbox
 - Variable globale de poids typographique (`--ui-font-weight`) + réglage dans paramètres

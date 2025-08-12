@@ -87,7 +87,7 @@ function App() {
   const [navCollapsed, setNavCollapsed] = useState(false)
   // Focus mode (persisté)
   const [focusMode, setFocusMode] = useState<boolean>(() => {
-    try { return localStorage.getItem('ariba-focus-mode') === '1' } catch { return false }
+  try { return localStorage.getItem('cards-focus-mode') === '1' } catch { return false }
   })
 
   // Appliquer dynamiquement les réglages UI (zoom, accent, police...)
@@ -169,8 +169,8 @@ function App() {
   // Persistance focus mode
   useEffect(() => {
     try {
-      if(focusMode) localStorage.setItem('ariba-focus-mode','1')
-      else localStorage.removeItem('ariba-focus-mode')
+  if(focusMode) localStorage.setItem('cards-focus-mode','1')
+  else localStorage.removeItem('cards-focus-mode')
     } catch {}
   }, [focusMode])
 

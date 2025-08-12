@@ -1,8 +1,8 @@
-# 🚀 Ariba Flashcards - Fonctionnalités Avancées
+# 🚀 Cards - Fonctionnalités Avancées
 
 ## 📋 Vue d'ensemble
 
-Ariba Flashcards est maintenant équipé de **7 systèmes d'optimisation avancés** et de fonctionnalités modernes pour une expérience d'apprentissage exceptionnelle.
+Cards est maintenant équipé de **7 systèmes d'optimisation avancés** et de fonctionnalités modernes pour une expérience d'apprentissage exceptionnelle.
 
 ## 🎯 Nouvelles Fonctionnalités Implémentées
 
@@ -359,4 +359,4 @@ Le système de gamification fonctionne automatiquement :
 
 ---
 
-*Ariba Flashcards - Révolutionner l'apprentissage avec l'IA et la gamification* 🚀
+*Cards - Révolutionner l'apprentissage avec l'IA et la gamification* 🚀

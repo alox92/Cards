@@ -1,4 +1,4 @@
-# 🚀 Guide d'Installation Rapide - Ariba Flashcards
+# 🚀 Guide d'Installation Rapide - Cards
 
 ## ⚠️ PRÉREQUIS OBLIGATOIRE : Node.js
 
@@ -102,4 +102,4 @@ Si vous rencontrez des problèmes :
 
 ---
 
-**🎉 Une fois Node.js installé, Ariba Flashcards sera prêt à fonctionner !**
+**🎉 Une fois Node.js installé, Cards sera prêt à fonctionner !**

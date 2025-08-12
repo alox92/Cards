@@ -1,8 +1,8 @@
-# 🚀 Les 7 Systèmes d'Optimisation Révolutionnaires - Ariba Flashcards
+# 🚀 Les 7 Systèmes d'Optimisation Révolutionnaires - Cards
 
 ## 📖 Vue d'ensemble
 
-La migration vers JavaScript/TypeScript a été complétée avec succès ! Voici un récapitulatif des **7 systèmes d'optimisation révolutionnaires** qui alimentent l'application Ariba Flashcards :
+La migration vers JavaScript/TypeScript a été complétée avec succès ! Voici un récapitulatif des **7 systèmes d'optimisation** qui alimentent l'application Cards :
 
 > Mise à jour récente (diagnostics & stabilité):
 > - Monitor FPS adaptatif avec seuil dynamique, cooldown erreurs, pause auto via Page Visibility

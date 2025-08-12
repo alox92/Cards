@@ -27,7 +27,7 @@ const HomePage = () => {
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-4">
               Bienvenue sur{' '}
               <span className="bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
-                Ariba Flashcards
+                Cards
               </span>
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">

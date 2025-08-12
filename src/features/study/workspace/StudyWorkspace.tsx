@@ -20,7 +20,7 @@ export const StudyWorkspace = () => {
   const [revealed, setRevealed] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
   // Préférence focus
-  useEffect(()=>{ try { if(localStorage.getItem('ariba.pref.autoFocusStudy')==='1') setFocusMode(true) } catch { /* ignore */ } }, [])
+  useEffect(()=>{ try { if(localStorage.getItem('cards.pref.autoFocusStudy')==='1') setFocusMode(true) } catch { /* ignore */ } }, [])
   const [showCreate, setShowCreate] = useState(false)
   // Hydrate depuis query param deck
   useEffect(()=>{
@@ -54,7 +54,7 @@ export const StudyWorkspace = () => {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if(!session.currentCard || session.finished) return
     if(['Space','ArrowLeft','ArrowRight','ArrowUp','KeyF','Escape'].includes(e.code)) e.preventDefault()
-  if(e.code==='KeyF'){ setFocusMode(f=>{ const v=!f; try { localStorage.setItem('ariba.pref.autoFocusStudy', v? '1':'0') } catch{}; return v }); return }
+  if(e.code==='KeyF'){ setFocusMode(f=>{ const v=!f; try { localStorage.setItem('cards.pref.autoFocusStudy', v? '1':'0') } catch{}; return v }); return }
     if(e.code==='Escape' && focusMode){ setFocusMode(false); return }
     if(e.code==='Space') {
       if(spaceDownAt.current==null){ spaceDownAt.current = Date.now(); spaceLongTriggered.current=false }

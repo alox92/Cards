@@ -136,7 +136,7 @@ const HomePage = () => {
                 transition={{ delay: 0.5, duration: 0.8 }}
                 className="text-6xl font-bold text-gradient mb-4"
               >
-                Ariba Flashcards
+                Cards
               </motion.h1>
               
               <motion.p
@@ -210,7 +210,7 @@ const HomePage = () => {
           >
             Bienvenue sur{' '}
             <span className="inline-block animate-float-3d">
-              Ariba Flashcards
+              Cards
             </span>
           </motion.h1>
           

@@ -1,5 +1,5 @@
 /**
- * Configuration de performance pour Ariba Flashcards
+ * Configuration de performance pour Cards
  * Optimisations pour améliorer la vitesse et réduire les saccades
  */
 

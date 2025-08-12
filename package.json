@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Application de cartes flash ultra-performante avec Tauri",
+  "description": "Cards - Application de cartes flash ultra-performante avec Tauri",
   "author": "Alox92",
   "license": "MIT",
   "scripts": {

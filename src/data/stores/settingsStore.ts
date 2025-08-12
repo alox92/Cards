@@ -102,7 +102,7 @@ export const useSettingsStore = create<SettingsStore>()(
       }
     }),
     {
-      name: 'ariba-settings',
+  name: 'cards-settings',
       version: 2,
       migrate: (persistedState: any) => {
         // Ajouter les nouvelles clés si absentes

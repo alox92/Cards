@@ -1,4 +1,4 @@
-# 🎯 Tests et Validation - Ariba Flashcards
+# 🎯 Tests et Validation - Cards
 
 ## ✅ Plan de Tests Complet
 
@@ -368,4 +368,4 @@ npm run audit:performance
 npm run audit:security
 ```
 
-*Ariba Flashcards - Qualité et fiabilité garanties* ✅
+*Cards - Qualité et fiabilité garanties* ✅

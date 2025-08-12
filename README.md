@@ -1,8 +1,8 @@
-# 🚀 Ariba Flashcards - Application Intelligente d'Apprentissage
+# 🚀 Cards - Application Intelligente d'Apprentissage
 
-Une application de cartes flash révolutionnaire avec **7 systèmes d'optimisation avancés** pour l'apprentissage adaptatif. Migrée de Flutter vers React TypeScript pour une expérience web moderne et performante.
+Application de cartes flash avancée avec **7 systèmes d'optimisation** pour l'apprentissage adaptatif. Migrée de Flutter vers React TypeScript pour une expérience web moderne et performante.
 
-![Ariba Banner](https://img.shields.io/badge/Ariba-Flashcards-blue?style=for-the-badge&logo=react)
+![Cards Banner](https://img.shields.io/badge/Cards-Flashcards-blue?style=for-the-badge&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
@@ -70,7 +70,7 @@ Assurez-vous d'avoir **Node.js** installé sur votre système :
 ```bash
 # Cloner le projet (si depuis un repo)
 git clone <repository-url>
-cd ariba-js
+cd cards
 
 # Installer les dépendances
 npm install
@@ -193,7 +193,7 @@ interface DeckStats {
 
 ## 🎯 Algorithme d'Apprentissage
 
-Ariba utilise l'algorithme **SM-2 (SuperMemo)** optimisé pour la répétition espacée :
+Cards utilise l'algorithme **SM-2 (SuperMemo)** optimisé pour la répétition espacée :
 
 - **Facteur de facilité** adaptatif selon les performances
 - **Intervalles optimaux** calculés automatiquement
@@ -223,11 +223,11 @@ Créez un fichier `.env.local` :
 
 ```bash
 # Configuration de l'application
-VITE_APP_NAME="Ariba Flashcards"
+VITE_APP_NAME="Cards"
 VITE_APP_VERSION="1.0.0"
 
 # Configuration de la base de données
-VITE_DB_NAME="AribaFlashcards"
+VITE_DB_NAME="CardsDB"
 VITE_DB_VERSION=1
 
 # Configuration des performances
@@ -342,13 +342,13 @@ Ce projet est sous licence **MIT**. Voir le fichier `LICENSE` pour plus de déta
 
 ## 💬 Support
 
-- **Documentation** : [Wiki du projet](https://github.com/user/ariba-js/wiki)
-- **Issues** : [GitHub Issues](https://github.com/user/ariba-js/issues)
-- **Discussions** : [GitHub Discussions](https://github.com/user/ariba-js/discussions)
+- **Documentation** : [Wiki du projet](https://github.com/user/cards/wiki)
+- **Issues** : [GitHub Issues](https://github.com/user/cards/issues)
+- **Discussions** : [GitHub Discussions](https://github.com/user/cards/discussions)
 - **Discord** : [Serveur communautaire](https://discord.gg/ariba)
 
 ---
 
 **Développé avec ❤️ par Alox92**
 
-*Ariba Flashcards - Révolutionnez votre apprentissage avec l'intelligence artificielle*
+*Cards - Révolutionnez votre apprentissage avec l'intelligence artificielle*

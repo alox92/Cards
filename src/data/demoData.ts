@@ -1,5 +1,5 @@
 /**
- * Données de démonstration pour Ariba Flashcards
+ * Données de démonstration pour Cards
  */
 
 import { DeckEntity } from '../domain/entities/Deck'

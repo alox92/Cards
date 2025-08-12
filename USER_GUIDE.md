@@ -1,4 +1,4 @@
-# 🎯 Guide d'Utilisation - Ariba Flashcards
+# 🎯 Guide d'Utilisation - Cards
 
 ## 🚀 Démarrage Rapide
 
@@ -471,12 +471,12 @@ await transition.animateIn(element, {
 
 ## ♻️ Persistance & Restauration
 
-- Paramètres stockés via Zustand persist (localStorage clé `ariba-settings`).
-- Focus Mode persistant (`ariba-focus-mode`).
-- Sessions d'étude actives stockées par deck (`ariba.activeSession.{deckId}`) et restaurées automatiquement.
+- Paramètres stockés via Zustand persist (localStorage clé `cards-settings`).
+- Focus Mode persistant (`cards-focus-mode`).
+- Sessions d'étude actives stockées par deck (`cards.activeSession.{deckId}`) et restaurées automatiquement.
 
 ---
 
 ---
 
-*Ariba Flashcards - Maîtrisez vos révisions avec l'IA et la gamification* 🎯
+*Cards - Maîtrisez vos révisions avec l'IA et la gamification* 🎯

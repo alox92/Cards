@@ -1,4 +1,4 @@
-# 🛠 Guide Développeur - Ariba Flashcards
+# 🛠 Guide Développeur - Cards
 
 ## Architecture (Clean-ish)
 - application/: Conteneur DI + services (DeckService, CardService, StudySessionService, etc.)
@@ -15,7 +15,7 @@
 4. Systèmes (ILS, FluidTransitionMastery) initialisés à la demande (singleton pour ILS).
 
 ## Settings Store (Zustand + persist)
-Clé: `ariba-settings`
+Clé: `cards-settings`
 Migration ajoute dynamiquement nouvelles propriétés:
 ```ts
 uiScale, accentColor, fontFamily, highContrast,
@@ -41,14 +41,14 @@ Utilisation Tailwind (exemple via CSS custom):
 ```
 
 ## Mode Focus
-- State persisté: localStorage `ariba-focus-mode`
+- State persisté: localStorage `cards-focus-mode`
 - Masque: Navigation + GlobalSearchBar
 - Bouton toggle dans barre supérieure
 
 ## Sessions d'Étude
 Hook: `useServiceStudySession({ deckId })`
 - buildQueue() construit une file (SM-2 via services futurs)
-- Persistance session: `ariba.activeSession.{deckId}` (queue restante + snapshot session)
+- Persistance session: `cards.activeSession.{deckId}` (queue restante + snapshot session)
 - resume() tente restauration au montage
 - answer(q) enregistre progression & retire carte
 
