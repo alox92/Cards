@@ -2,7 +2,10 @@ import { container } from '@/application/Container'
 import { MEDIA_REPOSITORY_TOKEN, DexieMediaRepository } from '@/infrastructure/persistence/dexie/DexieMediaRepository'
 import { CARD_REPOSITORY_TOKEN } from '@/domain/repositories/CardRepository'
 import type { CardRepository } from '@/domain/repositories/CardRepository'
-import JSZip from 'jszip'
+// Lazy-load JSZip to keep it out of the main bundle
+let _JSZip: any
+async function getJSZip(){ if(!_JSZip){ _JSZip = (await import('jszip')).default } return _JSZip }
+import { aribaDB } from '@/infrastructure/persistence/dexie/AribaDB'
 
 export interface MediaManifestEntry { id: string; type: string; mime: string; size: number; created: number; checksum: string }
 export interface MediaArchive { manifest: MediaManifestEntry[]; cards: any[]; blobs: Record<string, Blob> }
@@ -49,8 +52,7 @@ export async function importMediaArchive(archive: MediaArchive){
   for(const m of archive.manifest){
     const existing = await mediaRepo.get(m.id)
     if(!existing){
-      const { aribaDB } = await import('@/infrastructure/persistence/dexie/AribaDB')
-      await aribaDB.media.put({ id: m.id, type: m.type as any, mime: m.mime, blob: archive.blobs[m.id], created: m.created, checksum: m.checksum } as any)
+  await aribaDB.media.put({ id: m.id, type: m.type as any, mime: m.mime, blob: archive.blobs[m.id], created: m.created, checksum: m.checksum } as any)
     }
   }
   // Upsert cartes (simple: si existe on update, sinon create)
@@ -64,6 +66,7 @@ export async function importMediaArchive(archive: MediaArchive){
 // Création d'une archive ZIP (binaire) contenant manifest.json, cards.json et dossiers /media
 export async function exportMediaZip(): Promise<Blob> {
   const arch = await exportMediaArchive()
+  const JSZip = await getJSZip()
   const zip = new JSZip()
   zip.file('manifest.json', JSON.stringify({ manifest: arch.manifest }, null, 2))
   zip.file('cards.json', JSON.stringify(arch.cards, null, 2))
@@ -78,6 +81,7 @@ export async function exportMediaZip(): Promise<Blob> {
 
 // Lecture d'une archive ZIP et import: vérifie checksums; skip en cas de mismatch
 export async function importMediaZip(blob: Blob){
+  const JSZip = await getJSZip()
   const zip = await JSZip.loadAsync(blob)
   const manifestContent = await zip.file('manifest.json')!.async('string')
   const cardsContent = await zip.file('cards.json')!.async('string')
@@ -106,6 +110,7 @@ export async function exportMediaZipIncremental(): Promise<Blob> {
   const subsetIds = new Set(subsetManifest.map(m=>m.id))
   // Inclure uniquement les cartes qui référencent au moins un media nouveau
   const subsetCards = full.cards.filter(c => Array.isArray(c.mediaRefs) && c.mediaRefs.some((r:any)=> subsetIds.has(r.id)))
+  const JSZip = await getJSZip()
   const zip = new JSZip()
   zip.file('manifest.json', JSON.stringify({ manifest: subsetManifest }, null, 2))
   zip.file('cards.json', JSON.stringify(subsetCards, null, 2))

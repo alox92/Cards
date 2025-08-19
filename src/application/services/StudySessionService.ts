@@ -6,6 +6,7 @@ import type { CardEntity } from '../../domain/entities/Card'
 import { ValidationError, ServiceError } from '@/utils/errors'
 import { logger } from '@/utils/logger'
 import { eventBus } from '@/core/events/EventBus'
+import { WorkerPool } from '@/workers/WorkerPool'
 export class StudySessionService {
   private srs: SpacedRepetitionService
   private cardRepo: CardRepository
@@ -35,21 +36,12 @@ export class StudySessionService {
             const slice = all.slice(i, i + chunkSize).map(c => ({ id: c.id, deckId: c.deckId, nextReview: c.nextReview, totalReviews: c.totalReviews, created: (c as any).created || now }))
             chunks.push(slice)
           }
-          const workers: Worker[] = []
-          const promises: Array<Promise<{ dueIds: string[]; freshIds: string[] }>> = []
+          const pool = new WorkerPool<{ cards: any[]; deckId: string; dailyNewLimit: number; now: number; buriedIds: string[] }, { dueIds: string[]; freshIds: string[] }>(() => new workerModule.default(), threads)
           const buriedIds = (this.srs as any).getBuriedIds ? (this.srs as any).getBuriedIds() : []
-          for (let i = 0; i < chunks.length; i++) {
-            const w: Worker = new workerModule.default()
-            workers.push(w)
-            const payload = { cards: chunks[i], deckId, dailyNewLimit, now, buriedIds }
-            const p = new Promise<{ dueIds: string[]; freshIds: string[] }>((resolve) => {
-              w.onmessage = (ev: MessageEvent) => resolve(ev.data)
-            })
-            w.postMessage(payload)
-            promises.push(p)
-          }
-          const results = await Promise.all(promises)
-          workers.forEach(w => w.terminate && w.terminate())
+          const results = await Promise.all(
+            chunks.map(chunk => pool.run({ cards: chunk, deckId, dailyNewLimit, now, buriedIds }))
+          )
+          await pool.terminate()
           const dueIdSet = new Set<string>()
           const freshIdList: string[] = []
           for (const r of results) {

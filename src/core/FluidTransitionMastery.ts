@@ -4,6 +4,7 @@
  * Ce système gère les transitions entre les pages, animations et microinteractions
  * pour créer une expérience utilisateur premium et fluide.
  */
+import { logger } from '@/utils/logger'
 
 export type TransitionType = 
   | 'slide-left'
@@ -82,7 +83,8 @@ export class FluidTransitionMastery {
         // Idempotence: ne pas ré-initialiser (utile avec React StrictMode/dev remount)
         return
       }
-  import('@/utils/logger').then(m=> m.logger.info('FluidTransition','🌊 Initialisation')).catch(()=>{})
+  // Log d'initialisation
+  logger.info('FluidTransition','🌊 Initialisation')
       
       // Détecter les préférences utilisateur
       this.detectMotionPreferences()
@@ -94,10 +96,10 @@ export class FluidTransitionMastery {
       this.optimizeForDevice()
       
       this.isInitialized = true
-  import('@/utils/logger').then(m=> m.logger.info('FluidTransition','✅ Initialisé')).catch(()=>{})
+  logger.info('FluidTransition','✅ Initialisé')
       
     } catch (error) {
-      import('@/utils/logger').then(m=> m.logger.error('FluidTransition','❌ Erreur initialisation', { error: (error as any)?.message })).catch(()=>{})
+  logger.error('FluidTransition','❌ Erreur initialisation', { error: (error as any)?.message })
       throw error
     }
   }
@@ -112,7 +114,7 @@ export class FluidTransitionMastery {
   ): Promise<void> {
     const transitionId = `transition-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     
-  import('@/utils/logger').then(m=> m.logger.debug('FluidTransition',`Création transition ${config.type}`)).catch(()=>{})
+  logger.debug('FluidTransition',`Création transition ${config.type}`)
     
     return new Promise((resolve) => {
       const startTime = performance.now()
@@ -180,7 +182,7 @@ export class FluidTransitionMastery {
     
     if (prefersReducedMotion && this.settings.respectReducedMotion) {
       this.settings.globalScale = 0.2
-  import('@/utils/logger').then(m=> m.logger.info('FluidTransition','Mode réduit (accessibilité)')).catch(()=>{})
+  logger.info('FluidTransition','Mode réduit (accessibilité)')
     }
   }
 
@@ -302,7 +304,7 @@ export class FluidTransitionMastery {
     
     if (isMobile) {
       this.settings.globalScale *= 0.8
-  import('@/utils/logger').then(m=> m.logger.debug('FluidTransition','Optimisations mobile')).catch(()=>{})
+  logger.debug('FluidTransition','Optimisations mobile')
     }
   }
 
@@ -356,7 +358,7 @@ export class FluidTransitionMastery {
    */
   updateSettings(newSettings: Partial<FluidMotionSettings>): void {
     this.settings = { ...this.settings, ...newSettings }
-  import('@/utils/logger').then(m=> m.logger.info('FluidTransition','Paramètres mis à jour', { settings: this.settings })).catch(()=>{})
+  logger.info('FluidTransition','Paramètres mis à jour', { settings: this.settings })
   }
 
   /**
@@ -375,18 +377,18 @@ export class FluidTransitionMastery {
   this.animationFrameId = null
   this.activeAnimations.clear()
   this.isInitialized = false
-  import('@/utils/logger').then(m=> m.logger.info('FluidTransition','🛑 Arrêt')).catch(()=>{})
+  logger.info('FluidTransition','🛑 Arrêt')
   }
 
   pauseAll(){
     if(this.globallyPaused) return
     this.globallyPaused = true
-    import('@/utils/logger').then(m=> m.logger.debug('FluidTransition','⏸️ Pause globale animations')).catch(()=>{})
+  logger.debug('FluidTransition','⏸️ Pause globale animations')
   }
   resumeAll(){
     if(!this.globallyPaused) return
     this.globallyPaused = false
-    import('@/utils/logger').then(m=> m.logger.debug('FluidTransition','▶️ Reprise globale animations')).catch(()=>{})
+  logger.debug('FluidTransition','▶️ Reprise globale animations')
   }
 }
 

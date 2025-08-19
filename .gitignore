@@ -1,4 +1,34 @@
 # Dependencies
+node_modules/
+
+# Build output
+dist/
+coverage/
+.vite/
+.cache/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+.env.*.local
+
+# Editor
+.idea/
+.vs/
+
+# Tauri leftovers (web-only now)
+src-tauri/
+start-tauri.bat# Dependencies
 node_modules
 /.pnp
 .pnp.js

@@ -9,9 +9,12 @@ import { CardEntity } from '@/domain/entities/Card'
 import { DeckEntity } from '@/domain/entities/Deck'
 import { MEDIA_REPOSITORY_TOKEN, DexieMediaRepository } from '@/infrastructure/persistence/dexie/DexieMediaRepository'
 import { SEARCH_INDEX_SERVICE_TOKEN } from '@/application/services/SearchIndexService'
-import JSZip from 'jszip'
+// heavy libs loaded on demand to reduce main bundle size
+let _JSZip: any
+async function getJSZip(){ if(!_JSZip){ _JSZip = (await import('jszip')).default } return _JSZip }
 // @ts-ignore sql.js no types default import nuance
-import initSqlJs from 'sql.js'
+let _initSqlJs: any
+async function getSqlJs(){ if(!_initSqlJs){ const mod: any = await import('sql.js'); _initSqlJs = mod.default || mod } return _initSqlJs }
 
 export interface ImportResult { deck: DeckEntity; cards: CardEntity[]; media: number; warnings: string[] }
 
@@ -183,11 +186,13 @@ async function parseXLSX(file: File, columnMap?: { front?: string; back?: string
 
 async function parseApkg(file: File): Promise<Array<{ front: string; back: string; tags?: string[]; mediaAssets?: Record<string, Blob> }>> {
   try {
-    const zip = await JSZip.loadAsync(file)
+  const JSZip = await getJSZip()
+  const zip = await JSZip.loadAsync(file)
     const collection = zip.file('collection.anki2') || zip.file('collection.anki21')
     if(!collection) return []
     const buf = await collection.async('uint8array')
-    const SQL = await initSqlJs({})
+  const initSqlJs = await getSqlJs()
+  const SQL = await initSqlJs({})
     const db = new SQL.Database(buf)
     // models metadata (fields + templates for better front/back detection)
     interface ModelMeta { fields: string[]; frontIdx?: number; backIdx?: number }
@@ -286,7 +291,8 @@ async function parseApkg(file: File): Promise<Array<{ front: string; back: strin
 async function parseZip(file: File): Promise<{ entries: any[]; media: Record<string, Blob>; warnings: string[] }> {
   const warnings: string[] = []
   try {
-    const zip = await JSZip.loadAsync(file)
+  const JSZip = await getJSZip()
+  const zip = await JSZip.loadAsync(file)
     // Chercher manifest.csv / manifest.json
     let manifestType: 'csv'|'json'|'none' = 'none'
     let manifestContent = ''

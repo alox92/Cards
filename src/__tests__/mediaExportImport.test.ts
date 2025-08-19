@@ -35,9 +35,9 @@ describe('media export/import', () => {
     expect(Object.keys(archive.blobs).length).toBeGreaterThanOrEqual(2)
 
     // Purge la carte et media pour tester import (simple suppression via repos / DB directe)
-    const { aribaDB } = await import('@/infrastructure/persistence/dexie/AribaDB')
-    await aribaDB.cards.clear()
-    await aribaDB.media.clear()
+  const { aribaDB } = await import('@/infrastructure/persistence/dexie/AribaDB')
+  await aribaDB.cards.clear()
+  await aribaDB.media.clear()
 
     const result = await importMediaArchive(archive)
     expect(result.cards).toBeGreaterThanOrEqual(1)
