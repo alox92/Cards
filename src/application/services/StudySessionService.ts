@@ -21,7 +21,53 @@ export class StudySessionService {
     try {
       const start = performance.now()
       const all = await this.cardRepo.getAll();
-      const q = this.srs.getStudyQueue(all as CardEntity[], deckId, dailyNewLimit)
+      // Parallel path: use worker pool for large decks to leverage all cores
+      let q: CardEntity[]
+      const LARGE_THRESHOLD = 2000
+      if (all.length >= LARGE_THRESHOLD && typeof navigator !== 'undefined' && (navigator as any).hardwareConcurrency) {
+        try {
+          const workerModule = await import('@/workers/studyQueueWorker?worker')
+          const threads = Math.min((navigator as any).hardwareConcurrency || 4, 8)
+          const chunkSize = Math.ceil(all.length / threads)
+          const now = Date.now()
+          const chunks = [] as Array<Array<Pick<CardEntity,'id'|'deckId'|'nextReview'|'totalReviews'|'created'>>> 
+          for (let i = 0; i < all.length; i += chunkSize) {
+            const slice = all.slice(i, i + chunkSize).map(c => ({ id: c.id, deckId: c.deckId, nextReview: c.nextReview, totalReviews: c.totalReviews, created: (c as any).created || now }))
+            chunks.push(slice)
+          }
+          const workers: Worker[] = []
+          const promises: Array<Promise<{ dueIds: string[]; freshIds: string[] }>> = []
+          const buriedIds = (this.srs as any).getBuriedIds ? (this.srs as any).getBuriedIds() : []
+          for (let i = 0; i < chunks.length; i++) {
+            const w: Worker = new workerModule.default()
+            workers.push(w)
+            const payload = { cards: chunks[i], deckId, dailyNewLimit, now, buriedIds }
+            const p = new Promise<{ dueIds: string[]; freshIds: string[] }>((resolve) => {
+              w.onmessage = (ev: MessageEvent) => resolve(ev.data)
+            })
+            w.postMessage(payload)
+            promises.push(p)
+          }
+          const results = await Promise.all(promises)
+          workers.forEach(w => w.terminate && w.terminate())
+          const dueIdSet = new Set<string>()
+          const freshIdList: string[] = []
+          for (const r of results) {
+            r.dueIds.forEach(id => dueIdSet.add(id))
+            // collect fresh for later slicing across all chunks
+            for (let i = 0; i < r.freshIds.length; i++) freshIdList.push(r.freshIds[i])
+          }
+          // global fresh limit
+          const limitedFresh = freshIdList.slice(0, dailyNewLimit)
+          const idWanted = new Set<string>([...dueIdSet, ...limitedFresh])
+          q = (all as CardEntity[]).filter(c => idWanted.has(c.id))
+        } catch (err) {
+          // Fallback gracefully
+          q = this.srs.getStudyQueue(all as CardEntity[], deckId, dailyNewLimit)
+        }
+      } else {
+        q = this.srs.getStudyQueue(all as CardEntity[], deckId, dailyNewLimit)
+      }
       const dur = performance.now() - start
       // Throttling du log pour éviter le spam massif (reconstructions fréquentes réactives)
       const now = Date.now()

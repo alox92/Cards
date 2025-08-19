@@ -1,7 +1,7 @@
 {
-  "name": "Ariba Cards",
+  "name": "Cards",
   "short_name": "Cards",
-  "description": "Application de cartes flash IA + optimisation 120fps",
+  "description": "Application de cartes flash PWA ultra-performante",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

@@ -17,7 +17,7 @@ export default defineConfig({
       manifest: {
         name: 'Cards',
         short_name: 'Cards',
-        description: 'Application de cartes flash ultra-performante avec Tauri',
+  description: 'Application de cartes flash ultra-performante (Web PWA)',
         theme_color: '#3b82f6',
         background_color: '#ffffff',
         display: 'standalone',
@@ -83,7 +83,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    // Désactivation ouverture auto du navigateur (utiliser Tauri fenêtre native)
+  // Ouverture auto du navigateur contrôlée par env (Web-only)
     open: process.env.VITE_FORCE_OPEN === '1'
   }
 })

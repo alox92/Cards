@@ -29,5 +29,7 @@ export class SpacedRepetitionService {
   }
   bury(cardIds: string[]){ cardIds.forEach(id => this.buriedToday.add(id)) }
   resetBuried(){ this.buriedToday.clear() }
+  /** Expose read-only list of buried card IDs for advanced filtering */
+  getBuriedIds(): string[] { return Array.from(this.buriedToday) }
 }
 export const SPACED_REPETITION_SERVICE_TOKEN = 'SpacedRepetitionService'
