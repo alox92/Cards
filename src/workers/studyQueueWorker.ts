@@ -2,6 +2,7 @@
 // Input message: { cards: Array<{id:string; deckId:string; nextReview:number; totalReviews:number; created:number}>, deckId: string, dailyNewLimit: number, now: number, buriedIds?: string[] }
 // Output message: { dueIds: string[], freshIds: string[] }
 
+export {}
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ctx: any = self
 
