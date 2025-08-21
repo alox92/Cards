@@ -451,9 +451,9 @@ class CardsLogger {
 
 // Instance globale du logger
 import { FLAGS } from '@/utils/featureFlags'
-const isTauriProd = (typeof process !== 'undefined' && (process as any).env?.TAURI_ENV === 'production')
 export const logger = new CardsLogger({
-  minLevel: (process.env.NODE_ENV === 'development' && !isTauriProd) ? LogLevel.DEBUG : LogLevel.INFO,
+  // Web-only: pas de détection Tauri, DEBUG en dev sinon INFO
+  minLevel: (process.env.NODE_ENV === 'development') ? LogLevel.DEBUG : LogLevel.INFO,
   enablePerformanceTracking: true,
   colors: true,
   timestamp: true
