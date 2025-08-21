@@ -35,7 +35,7 @@
 - **Debug logs** : Aucun log console visible
 
 ### 🤔 Hypothèses Probables
-1. **Conflit de configuration Vite** avec Tauri
+1. **Conflit de configuration Vite** (ancien setup desktop retiré)
 2. **Problème de modules ES6** non résolus
 3. **Conflict avec PWA/Service Worker** cache
 4. **Problème de permissions** ou CSP (Content Security Policy)
@@ -92,11 +92,11 @@ npm run build
 npm run preview
 ```
 
-### 💡 Solution 5 : Désactivation Tauri
+### 💡 Solution 5 : Mode Web Unique
 ```bash
 # Tester uniquement en mode web
 npm run dev
-# (sans tauri dev)
+# (mode web-only)
 ```
 
 ---
@@ -144,7 +144,7 @@ Avant toute action drastique, le code suivant a été créé et doit être prés
 ### 🔄 Plan de Récupération
 1. **Test environnement** avec create-react-app
 2. **Migration progressive** du code validé
-3. **Réintégration Tauri** une fois React stable
+3. (Abandonné : aucun retour desktop prévu)
 4. **Restoration logging avancé** en dernier
 
 ---

@@ -19,10 +19,8 @@ L'application Cards est maintenant équipée d'un système de logging avancé qu
 2. Dans la navigation latérale, cliquez sur **🧪 Debug & Test**
 3. Utilisez l'interface pour tester et monitorer les logs
 
-### Via l'Application Native
-1. Lancez l'app native : `npm run tauri:dev`
-2. Accédez à la section Debug dans la navigation
-3. Testez les fonctionnalités de logging en temps réel
+### (Mode Desktop retiré)
+L'exécution native Tauri a été supprimée. Le debug se fait exclusivement via l'interface web.
 
 ## 🛠️ Utilisation du Logger
 

@@ -17,17 +17,12 @@
 ## 📊 ÉTAT TECHNIQUE ACTUEL
 
 ### 🟢 Fonctionnel à 100%
-- ✅ **Tauri 2.7** : Compilation native réussie
+### 🟢 Fonctionnel à 100%
 - ✅ **Vite + HMR** : Serveur de développement opérationnel 
-- ✅ **React 18 + TypeScript** : Infrastructure frontend stable
-- ✅ **Mode diagnostic** : Version ultra-simple validée
-- ✅ **HTTP 200** : Application répond correctement
 
 ### 🟡 En Test (Version Simple)
+3. (Réintégration desktop abandonnée : focus web uniquement)
 - 🔄 **App.simple.tsx** : Version intermédiaire avec navigation de base
-- 🔄 **Logger intégré** : Système de logging simple fonctionnel
-- 🔄 **Routing de base** : Navigation entre pages principales
-
 ### 🔵 Prêt pour Intégration
 - 📦 **Système logging avancé** : `logger.ts` (400+ lignes) prêt
 - 📦 **Types avancés** : `advanced.ts` (300+ lignes) disponible

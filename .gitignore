@@ -26,8 +26,6 @@ Thumbs.db
 .idea/
 .vs/
 
-# Tauri leftovers (web-only now)
-# Tauri (supprimé, web-only)
 node_modules
 /.pnp
 .pnp.js
