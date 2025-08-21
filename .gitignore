@@ -27,8 +27,7 @@ Thumbs.db
 .vs/
 
 # Tauri leftovers (web-only now)
-src-tauri/
-start-tauri.bat# Dependencies
+# Tauri (supprimé, web-only)
 node_modules
 /.pnp
 .pnp.js
