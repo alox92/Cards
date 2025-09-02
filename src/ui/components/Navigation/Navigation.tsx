@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback, useMemo, memo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { MOTION_VARIANTS, PERFORMANCE_STYLES } from '@/utils/performanceOptimizer'
@@ -11,13 +11,36 @@ interface NavigationProps {
   onCollapseChange?: (collapsed: boolean) => void
 }
 
-const Navigation = ({ onThemeToggle, currentTheme, onCollapseChange }: NavigationProps) => {
+const Navigation = memo(({ onThemeToggle, currentTheme, onCollapseChange }: NavigationProps) => {
   const location = useLocation()
   const [isCollapsed, setIsCollapsed] = useState(false)
 
-  const menuGroups = primaryNavigationOrder
-    .filter(cat => groupedRoutes[cat])
-    .map(cat => ({ category: cat, routes: groupedRoutes[cat].filter(r => !r.path.includes(':')) }))
+  // Memoize menu groups computation to avoid recalculation
+  const menuGroups = useMemo(() => 
+    primaryNavigationOrder
+      .filter(cat => groupedRoutes[cat])
+      .map(cat => ({ category: cat, routes: groupedRoutes[cat].filter(r => !r.path.includes(':')) })),
+    []
+  )
+
+  // Optimize collapse handler with useCallback
+  const handleCollapseToggle = useCallback(() => {
+    const next = !isCollapsed
+    setIsCollapsed(next)
+    onCollapseChange?.(next)
+  }, [isCollapsed, onCollapseChange])
+
+  // Memoize category names mapping
+  const getCategoryName = useCallback((category: string) => {
+    const categoryNames = {
+      'learn': 'Apprentissage',
+      'organize': 'Organisation', 
+      'create': 'Création',
+      'analyze': 'Analyse',
+      'system': 'Système'
+    }
+    return categoryNames[category as keyof typeof categoryNames] || category
+  }, [])
 
   return (
     <motion.nav
@@ -46,7 +69,7 @@ const Navigation = ({ onThemeToggle, currentTheme, onCollapseChange }: Navigatio
           </motion.div>
           
           <motion.button
-            onClick={() => { const next = !isCollapsed; setIsCollapsed(next); onCollapseChange?.(next) }}
+            onClick={handleCollapseToggle}
             variants={MOTION_VARIANTS.button}
             initial="initial"
             whileHover="hover"
@@ -67,11 +90,7 @@ const Navigation = ({ onThemeToggle, currentTheme, onCollapseChange }: Navigatio
               <StaggerItem key={group.category}>
                 {!isCollapsed && (
                   <div className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500">
-                    {group.category === 'learn' && 'Apprentissage'}
-                    {group.category === 'organize' && 'Organisation'}
-                    {group.category === 'create' && 'Création'}
-                    {group.category === 'analyze' && 'Analyse'}
-                    {group.category === 'system' && 'Système'}
+                    {getCategoryName(group.category)}
                   </div>
                 )}
                 <ul className="mb-3 space-y-1">
@@ -147,6 +166,6 @@ const Navigation = ({ onThemeToggle, currentTheme, onCollapseChange }: Navigatio
       </div>
     </motion.nav>
   )
-}
+})
 
 export default Navigation

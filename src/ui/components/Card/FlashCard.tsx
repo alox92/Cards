@@ -1,8 +1,8 @@
 /**
- * Composant FlashCard - Affiche une carte flash interactive
+ * Composant FlashCard - Affiche une carte flash interactive (optimisé)
  */
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { CardEntity } from '../../../domain/entities/Card'
 import { container } from '@/application/Container'
 import { MEDIA_REPOSITORY_TOKEN, DexieMediaRepository } from '@/infrastructure/persistence/dexie/DexieMediaRepository'
@@ -20,7 +20,8 @@ const useMediaImage = (idOrData?: string) => {
   return src
 }
 
-const FrontImage: React.FC<{card: CardEntity}> = ({ card }) => {
+// Memoized image components to prevent unnecessary re-renders
+const FrontImage = memo<{card: CardEntity}>(({ card }) => {
   const src = useMediaImage(card.frontImage)
   if(!src) return null
   return (
@@ -28,8 +29,9 @@ const FrontImage: React.FC<{card: CardEntity}> = ({ card }) => {
       <img src={src} alt="Face avant" className="max-w-full max-h-32 object-contain rounded" />
     </div>
   )
-}
-const BackImage: React.FC<{card: CardEntity}> = ({ card }) => {
+})
+
+const BackImage = memo<{card: CardEntity}>(({ card }) => {
   const src = useMediaImage(card.backImage)
   if(!src) return null
   return (
@@ -37,7 +39,7 @@ const BackImage: React.FC<{card: CardEntity}> = ({ card }) => {
       <img src={src} alt="Face arrière" className="max-w-full max-h-32 object-contain rounded" />
     </div>
   )
-}
+})
 
 interface FlashCardProps {
   card: CardEntity
@@ -49,7 +51,7 @@ interface FlashCardProps {
   className?: string
 }
 
-export const FlashCard: React.FC<FlashCardProps> = ({
+export const FlashCard = memo<FlashCardProps>(({
   card,
   onAnswer,
   onNext,
@@ -79,14 +81,15 @@ export const FlashCard: React.FC<FlashCardProps> = ({
     }
   }, [autoFlip, card.id])
 
-  const handleFlip = () => {
+  // Optimize handlers with useCallback to prevent child re-renders
+  const handleFlip = useCallback(() => {
     if (!showAnswer) {
       setIsFlipped(true)
       setShowAnswer(true)
     }
-  }
+  }, [showAnswer])
 
-  const handleAnswer = (quality: number) => {
+  const handleAnswer = useCallback((quality: number) => {
     const responseTime = Date.now() - startTime
     onAnswer(quality, responseTime)
     
@@ -94,47 +97,55 @@ export const FlashCard: React.FC<FlashCardProps> = ({
     setIsFlipped(false)
     setShowAnswer(false)
     setStartTime(Date.now())
-  }
+  }, [startTime, onAnswer])
 
-  const getDifficultyColor = (difficulty: number) => {
-    switch (difficulty) {
-      case 1:
-      case 2:
-        return 'bg-green-100 border-green-300 text-green-800'
-      case 3:
-        return 'bg-yellow-100 border-yellow-300 text-yellow-800'
-      case 4:
-      case 5:
-        return 'bg-red-100 border-red-300 text-red-800'
-      default:
-        return 'bg-gray-100 border-gray-300 text-gray-800'
+  // Memoize color and text mapping functions
+  const difficultyConfig = useMemo(() => {
+    const getDifficultyColor = (difficulty: number) => {
+      switch (difficulty) {
+        case 1:
+        case 2:
+          return 'bg-green-100 border-green-300 text-green-800'
+        case 3:
+          return 'bg-yellow-100 border-yellow-300 text-yellow-800'
+        case 4:
+        case 5:
+          return 'bg-red-100 border-red-300 text-red-800'
+        default:
+          return 'bg-gray-100 border-gray-300 text-gray-800'
+      }
     }
-  }
 
-  const getDifficultyText = (difficulty: number) => {
-    switch (difficulty) {
-      case 1:
-        return 'Très facile'
-      case 2:
-        return 'Facile'
-      case 3:
-        return 'Moyen'
-      case 4:
-        return 'Difficile'
-      case 5:
-        return 'Très difficile'
-      default:
-        return 'Non défini'
+    const getDifficultyText = (difficulty: number) => {
+      switch (difficulty) {
+        case 1:
+          return 'Très facile'
+        case 2:
+          return 'Facile'
+        case 3:
+          return 'Moyen'
+        case 4:
+          return 'Difficile'
+        case 5:
+          return 'Très difficile'
+        default:
+          return 'Non défini'
+      }
     }
-  }
+
+    return {
+      color: getDifficultyColor(card.difficulty),
+      text: getDifficultyText(card.difficulty)
+    }
+  }, [card.difficulty])
 
   return (
     <div className={`max-w-2xl mx-auto ${className}`}>
       {/* En-tête avec informations */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getDifficultyColor(card.difficulty)}`}>
-            {getDifficultyText(card.difficulty)}
+          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${difficultyConfig.color}`}>
+            {difficultyConfig.text}
           </span>
           {card.tags.length > 0 && (
             <div className="flex space-x-1">
@@ -291,4 +302,4 @@ export const FlashCard: React.FC<FlashCardProps> = ({
       </div>
     </div>
   )
-}
+})
