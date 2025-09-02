@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { container } from '@/application/Container'
 import { DECK_SERVICE_TOKEN, DeckService } from '@/application/services/DeckService'
@@ -6,11 +6,14 @@ import { CARD_SERVICE_TOKEN, CardService } from '@/application/services/CardServ
 import { CardEntity } from '@/domain/entities/Card'
 import FuturisticLayout from '@/ui/components/layout/FuturisticLayout'
 import { logger } from '@/utils/logger'
+import { useConcurrentTransition, useDeferredSearch } from '@/utils/reactConcurrentFeatures'
 
-// Vue rapide: liste scrollable de cartes d'un deck avec création inline
+// Vue rapide: liste scrollable de cartes d'un deck avec création inline (optimisée React concurrent)
 const StudyServiceDeckPage: React.FC = () => {
   const { deckId } = useParams<{ deckId: string }>()
   const navigate = useNavigate()
+  const { executeTransition } = useConcurrentTransition()
+  
   const deckService = container.resolve<DeckService>(DECK_SERVICE_TOKEN)
   const cardService = container.resolve<CardService>(CARD_SERVICE_TOKEN)
   const [deck, setDeck] = useState<any>(null)
@@ -31,6 +34,9 @@ const StudyServiceDeckPage: React.FC = () => {
   const [studySelIndex, setStudySelIndex] = useState(0)
   const listRef = useRef<HTMLDivElement | null>(null)
 
+  // Deferred search for performance
+  const { searchTerm: deferredFilter } = useDeferredSearch(cards, filter, 200)
+
   const load = useCallback(async () => {
     if(!deckId) return
     setLoading(true)
@@ -40,12 +46,20 @@ const StudyServiceDeckPage: React.FC = () => {
       if(!d){ setError('Deck introuvable'); setDeck(null); setCards([]); return }
       setDeck(d)
       const list = await cardService.listByDeck(deckId)
-      setCards(list)
+      
+      // Use concurrent state updates for large datasets
+      if (list.length > 500) {
+        executeTransition(() => {
+          setCards(list)
+        })
+      } else {
+        setCards(list)
+      }
     } catch(e:any){
       logger.error('StudyService','Erreur chargement deck/cards',{e})
       setError(e?.message || 'Erreur chargement')
     } finally { setLoading(false) }
-  }, [deckId, deckService, cardService])
+  }, [deckId, deckService, cardService, executeTransition])
 
   useEffect(()=> { void load() }, [load])
 
@@ -60,8 +74,114 @@ const StudyServiceDeckPage: React.FC = () => {
     finally { setCreating(false) }
   }
 
-  // Filtrage + Virtualisation
-  const filtered = filter.trim() ? cards.filter(c => c.frontText.toLowerCase().includes(filter.toLowerCase()) || c.backText.toLowerCase().includes(filter.toLowerCase())) : cards
+  // Optimized filtering with deferred search
+  const filtered = useMemo(() => {
+    if (!deferredFilter.trim()) return cards
+    const searchLower = deferredFilter.toLowerCase()
+    return cards.filter(c => 
+      c.frontText.toLowerCase().includes(searchLower) || 
+      c.backText.toLowerCase().includes(searchLower)
+    )
+  }, [cards, deferredFilter])
+
+// TODO: Enhanced CardItem component with React.memo (ready for use)
+/*
+const CardItem = memo(({ 
+  card, 
+  index, 
+  isSelected, 
+  isEditing, 
+  selectedIndex,
+  showBack,
+  editFront,
+  editBack,
+  setEditFront,
+  setEditBack,
+  onToggleSelect,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  onDelete
+}: {
+  card: CardEntity
+  index: number
+  isSelected: boolean
+  isEditing: boolean
+  selectedIndex: number
+  showBack: boolean
+  editFront: string
+  editBack: string
+  setEditFront: (value: string) => void
+  setEditBack: (value: string) => void
+  onToggleSelect: (id: string) => void
+  onStartEdit: (card: CardEntity) => void
+  onSaveEdit: () => void
+  onCancelEdit: () => void
+  onDelete: (id: string) => void
+}) => {
+  const isHighlighted = selectedIndex === index
+  
+  return (
+    <div 
+      className={`p-3 border rounded mb-2 transition-colors ${
+        isHighlighted ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700'
+      } ${isSelected ? 'ring-2 ring-green-500' : ''}`}
+    >
+      {isEditing ? (
+        <div className="space-y-2">
+          <input
+            value={editFront}
+            onChange={(e) => setEditFront(e.target.value)}
+            className="w-full p-2 border rounded text-sm"
+            placeholder="Face avant"
+          />
+          <textarea
+            value={editBack}
+            onChange={(e) => setEditBack(e.target.value)}
+            className="w-full p-2 border rounded text-sm"
+            rows={3}
+            placeholder="Face arrière"
+          />
+          <div className="flex gap-2">
+            <button onClick={onSaveEdit} className="px-3 py-1 bg-green-600 text-white rounded text-sm">✓</button>
+            <button onClick={onCancelEdit} className="px-3 py-1 bg-gray-600 text-white rounded text-sm">✗</button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm text-gray-500">#{index + 1}</span>
+            <div className="flex gap-1">
+              <button
+                onClick={() => onToggleSelect(card.id!)}
+                className="text-xs px-2 py-1 rounded bg-gray-200 hover:bg-gray-300"
+              >
+                {isSelected ? '☑' : '☐'}
+              </button>
+              <button
+                onClick={() => onStartEdit(card)}
+                className="text-xs px-2 py-1 rounded bg-blue-200 hover:bg-blue-300"
+              >
+                ✏
+              </button>
+              <button
+                onClick={() => onDelete(card.id!)}
+                className="text-xs px-2 py-1 rounded bg-red-200 hover:bg-red-300"
+              >
+                🗑
+              </button>
+            </div>
+          </div>
+          <div className="text-sm">
+            <div className="font-medium mb-1">{card.frontText}</div>
+            {showBack && <div className="text-gray-600 dark:text-gray-400">{card.backText}</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+})
+*/
   const VIRTUALIZE_THRESHOLD = 1000
   const [mode, setMode] = useState<'virtual'|'pagination'>('virtual')
   const virtualize = mode==='virtual' && filtered.length > VIRTUALIZE_THRESHOLD
