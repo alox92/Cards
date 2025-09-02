@@ -4,7 +4,10 @@ import { AdaptiveOrchestratorService } from '@/application/services/AdaptiveOrch
 describe('AdaptiveOrchestratorService', () => {
   it('computes queue (skip if no indexedDB)', async () => {
     if(typeof indexedDB === 'undefined'){ return }
-    const orchestrator = new AdaptiveOrchestratorService()
+    // Mock services
+    const mockForecastSvc = { warmup: () => Promise.resolve() } as any
+    const mockInsightSvc = { generate: () => Promise.resolve() } as any
+    const orchestrator = new AdaptiveOrchestratorService(mockForecastSvc, mockInsightSvc)
     // minimal fake cards
     const now = Date.now()
     const cards: any[] = [
