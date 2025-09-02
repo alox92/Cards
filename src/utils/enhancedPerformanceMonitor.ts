@@ -31,7 +31,6 @@ export class EnhancedPerformanceMonitor {
   private isMonitoring = false
   private observers: PerformanceObserver[] = []
   private componentTimings = new Map<string, number[]>()
-  private longTaskThreshold = 50 // ms
   private hotComponentThreshold = 3 // ms average render time
 
   private constructor() {
@@ -187,9 +186,10 @@ export class EnhancedPerformanceMonitor {
         const navigationObserver = new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
             if (entry.entryType === 'navigation') {
+              const navEntry = entry as PerformanceNavigationTiming
               console.log('📊 Navigation timing:', {
-                domContentLoaded: entry.domContentLoadedEventEnd - entry.domContentLoadedEventStart,
-                loadComplete: entry.loadEventEnd - entry.loadEventStart
+                domContentLoaded: navEntry.domContentLoadedEventEnd - navEntry.domContentLoadedEventStart,
+                loadComplete: navEntry.loadEventEnd - navEntry.loadEventStart
               })
             }
           }
