@@ -43,7 +43,7 @@ const DecksPage: React.FC = () => {
 
   return (
     <FuturisticLayout>
-    <div className="min-h-screen bg-transparent p-6">
+  <div className="min-h-screen bg-transparent p-6">
       <div className="max-w-7xl mx-auto relative">
         <div className="mb-10 text-center">
           <motion.h1
@@ -166,6 +166,11 @@ const DecksPage: React.FC = () => {
             </motion.div>
           </div>
         )}
+      </div>
+      {/* FABs */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-40">
+        <button onClick={()=> setShowCreateModal(true)} className="shadow-lg rounded-full h-14 w-14 bg-gradient-to-br from-indigo-600 to-fuchsia-600 text-white text-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition" title="Créer un paquet">📚</button>
+        {decks.length>0 && <button onClick={()=> navigate('/create')} className="shadow-lg rounded-full h-14 w-14 bg-gradient-to-br from-emerald-600 to-teal-600 text-white text-3xl flex items-center justify-center hover:scale-105 active:scale-95 transition" title="Créer une carte">＋</button>}
       </div>
     </div>
     </FuturisticLayout>

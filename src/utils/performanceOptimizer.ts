@@ -227,6 +227,8 @@ export const PERFORMANCE_STYLES = {
 export class PerformanceOptimizer {
   private static rafId: number | null = null
   private static idleSupported = typeof (globalThis as any).requestIdleCallback !== 'undefined'
+  // Horodatage du dernier yield coopératif pour un contrôle budget fiable
+  private static lastYieldTime = performance.now()
   
   /**
    * RequestAnimationFrame optimisé pour 120fps
@@ -240,10 +242,26 @@ export class PerformanceOptimizer {
 
   /** Planifie une tâche non critique après le rendu initial */
   static scheduleIdle(task: () => void, timeout = 500){
+    const wrapped = () => {
+      const t0 = performance.now()
+      try { task() } finally {
+        const dur = performance.now() - t0
+        try {
+          const store = (window as any).__IDLE_TASKS__ || ((window as any).__IDLE_TASKS__ = [])
+          store.push({ name: (task as any).name || 'anon', duration: Math.round(dur), at: Date.now() })
+          // keep last 40
+          if(store.length>40) store.splice(0, store.length-40)
+          // Aggregations
+          const agg = (window as any).__IDLE_TASKS_AGG__ || ((window as any).__IDLE_TASKS_AGG__ = {})
+          const n = agg[(task as any).name || 'anon'] || { count:0, total:0, max:0 }
+          n.count += 1; n.total += dur; if(dur > n.max) n.max = dur; n.avg = n.total / n.count; agg[(task as any).name || 'anon'] = n
+        } catch { /* ignore */ }
+      }
+    }
     if(this.idleSupported){
-      ;(globalThis as any).requestIdleCallback(task, { timeout })
+      ;(globalThis as any).requestIdleCallback(wrapped, { timeout })
     } else {
-      setTimeout(task, Math.min(timeout, 200))
+      setTimeout(wrapped, Math.min(timeout, 200))
     }
   }
 
@@ -258,6 +276,30 @@ export class PerformanceOptimizer {
     return (...args: Parameters<T>) => {
       clearTimeout(timeout)
       timeout = setTimeout(() => func.apply(this, args), wait)
+    }
+  }
+
+  /** Coopérative: cède au main thread si budget dépassé (évite blocage UI) */
+  static async yieldToMain(budgetMs = 12){
+    const now = performance.now()
+    if(now - this.lastYieldTime >= budgetMs){
+      await new Promise(res => setTimeout(res,0))
+      this.lastYieldTime = performance.now()
+    }
+  }
+
+  /** Traite un tableau en chunks en cédant régulièrement */
+  static async runChunked<T>(items: T[], chunkSize: number, fn: (item: T, index: number) => void | Promise<void>, yieldEvery = 8){
+    let processed = 0
+    for(let i=0;i<items.length;i+=chunkSize){
+      const slice = items.slice(i, i+chunkSize)
+      for(let j=0;j<slice.length;j++){
+        await fn(slice[j], i+j)
+        processed++
+        if(processed % (chunkSize * yieldEvery) === 0){
+          await new Promise(r=> setTimeout(r,0))
+        }
+      }
     }
   }
 

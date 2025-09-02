@@ -63,9 +63,21 @@ export class AribaDB extends Dexie {
       media: 'id,type,checksum',
       searchIndex: '++id,term,cardId'
     })
+    // v6: search term stats + trigram fuzzy index
+    this.version(6).stores({
+      cards: 'id, deckId, nextReview',
+      decks: 'id',
+      sessions: 'id, deckId, startTime',
+      media: 'id,type,checksum',
+      searchIndex: '++id,term,cardId',
+      searchTermStats: 'term,count',
+      searchTrigrams: '++id,tri,cardId'
+    })
   }
 }
 
 export const aribaDB = new AribaDB()
 export interface MediaRow { id: string; type: 'image' | 'audio' | 'pdf'; mime: string; blob: Blob; created: number; checksum?: string }
 export interface SearchIndexRow { id?: number; term: string; cardId: string }
+export interface SearchTermStatRow { term: string; count: number }
+export interface SearchTrigramRow { id?: number; tri: string; cardId: string }

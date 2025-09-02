@@ -13,9 +13,16 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage",
-  "typecheck": "tsc --noEmit"
+  "test:ui": "vitest --ui",
+  "test:coverage": "vitest run --coverage",
+  "typecheck": "tsc --noEmit",
+  "bench": "vitest bench",
+  "perf:smoke": "node scripts/perfSmoke.cjs",
+  "perf:record": "node scripts/benchRecord.cjs && node scripts/perfSmoke.cjs",
+  "perf:lighthouse": "node scripts/lighthouse.cjs",
+  "perf:check": "npm run perf:record && node scripts/perfCheck.cjs",
+  "perf:report": "npm run build && node scripts/perfReport.cjs",
+  "perf:learn:check": "node scripts/learnCheck.cjs"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.17",
@@ -32,8 +39,9 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.15.0",
     "sql.js": "^1.13.0",
-    "xlsx": "^0.18.5",
-    "zustand": "^4.4.1"
+  "xlsx": "^0.18.5",
+  "zustand": "^4.4.1",
+  "web-vitals": "^4.2.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.1.3",

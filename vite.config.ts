@@ -48,6 +48,16 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
               }
             }
+          },
+          {
+            urlPattern: /\/api\/.*$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 50, maxAgeSeconds: 3600 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
           }
         ]
       }

@@ -7,11 +7,13 @@ import { ValidationError, ServiceError } from '@/utils/errors'
 import { logger } from '@/utils/logger'
 import { eventBus } from '@/core/events/EventBus'
 import { WorkerPool } from '@/workers/WorkerPool'
+import { adaptiveStudyScorer } from './AdaptiveStudyScorer'
+import { AdaptiveOrchestratorService } from './AdaptiveOrchestratorService'
 export class StudySessionService {
   private srs: SpacedRepetitionService
   private cardRepo: CardRepository
   private sessionRepo: StudySessionRepository
-  constructor(srs: SpacedRepetitionService, cardRepo: CardRepository, sessionRepo: StudySessionRepository) {
+  constructor(srs: SpacedRepetitionService, cardRepo: CardRepository, sessionRepo: StudySessionRepository, private orchestrator?: AdaptiveOrchestratorService) {
     this.srs = srs
     this.cardRepo = cardRepo
     this.sessionRepo = sessionRepo
@@ -73,6 +75,8 @@ export class StudySessionService {
         meta.t = now
         meta.size = q.length
       }
+      // Phase 5: post-tri adaptatif (ne modifie pas la sélection due/fresh, seulement l'ordre)
+  try { if(this.orchestrator){ q = this.orchestrator.computeQueue(q, deckId) } } catch {/* ignore scoring errors */}
       return q
     } catch(e){
       logger.error('StudySession','Echec buildQueue',{error:e, deckId})
@@ -82,6 +86,8 @@ export class StudySessionService {
   async recordAnswer(card: CardEntity, quality: number, responseTimeMs: number): Promise<CardEntity> { 
     this.srs.schedule(card, quality, responseTimeMs); 
     await this.cardRepo.update(card); 
+    // Feedback Phase 8
+  try { if(this.orchestrator){ const base = adaptiveStudyScorer.scoreCards([card], { now: Date.now(), targetDeck: card.deckId })[0]; this.orchestrator.recordFeedback(base?.score || 0, quality >=3 ? 1:0, responseTimeMs) } } catch{}
     // Publier événement carte revue pour invalidations caches / UI
     try { eventBus.publish({ type: 'card.reviewed', payload: { cardId: card.id, deckId: card.deckId, quality, nextReview: card.nextReview } }) } catch { /* ignore */ }
     return card 

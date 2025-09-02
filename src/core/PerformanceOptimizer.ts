@@ -34,6 +34,8 @@ export interface PerformanceMetrics {
   activeElements: number
   pendingRequests: number
   backgroundTasks: number
+  workerQueueLength?: number
+  cacheEntries?: number
 }
 
 export interface OptimizationRule {
@@ -59,6 +61,11 @@ export interface PerformanceBudget {
 
 export type PerformanceLevel = 'critical' | 'warning' | 'good' | 'excellent'
 
+import { globalEventBus } from './eventBus'
+import { defaultOptimizationRules } from '@/core/perf/rules'
+import { getPendingRequests } from '@/core/net/fetchTracker'
+import { WorkerPool, createComputationWorker } from '@/core/workers/workerPool'
+
 export class PerformanceOptimizer extends EventTarget {
   private metrics: PerformanceMetrics = {
     fps: 60,
@@ -79,7 +86,9 @@ export class PerformanceOptimizer extends EventTarget {
     cacheHitRate: 100,
     activeElements: 0,
     pendingRequests: 0,
-    backgroundTasks: 0
+  backgroundTasks: 0,
+  workerQueueLength: 0,
+  cacheEntries: 0
   }
 
   private budget: PerformanceBudget = {
@@ -107,85 +116,25 @@ export class PerformanceOptimizer extends EventTarget {
   private memoryHistory: number[] = []
   
   private webWorkers: Map<string, Worker> = new Map()
+  private workerPool: WorkerPool | null = null
   private taskQueue: Array<() => Promise<void>> = []
   private isProcessingTasks = false
 
   constructor() {
     super()
-    this.setupOptimizationRules()
+    // Charger les règles via le module externalisé
+    const rules = defaultOptimizationRules({
+      budget: this.budget,
+  run: (detail: any) => { this.dispatchEvent(new CustomEvent('optimize', { detail })) },
+      helpers: {
+        performMemoryCleanup: () => this.performMemoryCleanup(),
+        enableLazyLoading: () => this.enableLazyLoading(),
+        offloadTasksToWorkers: () => this.offloadTasksToWorkers(),
+        performIntelligentPreload: () => this.performIntelligentPreload()
+      }
+    } as any)
+    rules.forEach(r => this.addOptimizationRule(r))
     this.initializeMonitoring()
-  }
-
-  /**
-   * Configure les règles d'optimisation par défaut
-   */
-  private setupOptimizationRules(): void {
-    // Règle 1: Réduction qualité si FPS faible
-    this.addOptimizationRule({
-      id: 'reduce-quality-low-fps',
-      name: 'Réduction qualité (FPS faible)',
-      condition: (metrics) => metrics.fps < this.budget.minFps,
-      action: async () => {
-        this.dispatchEvent(new CustomEvent('optimize', {
-          detail: { type: 'rendering', action: 'reduceQuality', reason: 'low-fps' }
-        }))
-      },
-      priority: 1,
-      cooldown: 5000,
-      lastExecuted: 0
-    })
-
-    // Règle 2: Nettoyage mémoire si usage élevé
-    this.addOptimizationRule({
-      id: 'cleanup-memory-high-usage',
-      name: 'Nettoyage mémoire',
-      condition: (metrics) => metrics.memoryUsagePercent > 80,
-      action: async () => {
-        await this.performMemoryCleanup()
-      },
-      priority: 2,
-      cooldown: 10000,
-      lastExecuted: 0
-    })
-
-    // Règle 3: Lazy loading si beaucoup d'éléments actifs
-    this.addOptimizationRule({
-      id: 'enable-lazy-loading',
-      name: 'Activation lazy loading',
-      condition: (metrics) => metrics.activeElements > 100,
-      action: async () => {
-        this.enableLazyLoading()
-      },
-      priority: 3,
-      cooldown: 15000,
-      lastExecuted: 0
-    })
-
-    // Règle 4: Utilisation Web Workers pour tâches lourdes
-    this.addOptimizationRule({
-      id: 'offload-to-workers',
-      name: 'Délégation aux Web Workers',
-      condition: (metrics) => metrics.scriptTime > 50,
-      action: async () => {
-        this.offloadTasksToWorkers()
-      },
-      priority: 4,
-      cooldown: 20000,
-      lastExecuted: 0
-    })
-
-    // Règle 5: Preload intelligent basé sur les patterns
-    this.addOptimizationRule({
-      id: 'intelligent-preload',
-      name: 'Preload intelligent',
-      condition: (metrics) => metrics.cacheHitRate < 90 && metrics.pendingRequests < 3,
-      action: async () => {
-        this.performIntelligentPreload()
-      },
-      priority: 5,
-      cooldown: 30000,
-      lastExecuted: 0
-    })
   }
 
   /**
@@ -401,8 +350,7 @@ export class PerformanceOptimizer extends EventTarget {
    * Compte les requêtes en attente
    */
   private getPendingRequestsCount(): number {
-    // Simulation - sera remplacé par le vrai comptage
-    return Math.floor(Math.random() * 5)
+    return getPendingRequests()
   }
 
   /**
@@ -436,9 +384,9 @@ export class PerformanceOptimizer extends EventTarget {
       await rule.action()
       rule.lastExecuted = Date.now()
       
-      this.dispatchEvent(new CustomEvent('optimizationApplied', {
-        detail: { rule: rule.name, timestamp: rule.lastExecuted }
-      }))
+  const payload = { rule: rule.name, timestamp: rule.lastExecuted }
+  this.dispatchEvent(new CustomEvent('optimizationApplied', { detail: payload }))
+  globalEventBus.emit('optimization', payload)
       
     } catch (error) {
       console.error(`Erreur lors de l'exécution de la règle ${rule.name}:`, error)
@@ -504,37 +452,8 @@ export class PerformanceOptimizer extends EventTarget {
    * Délègue les tâches aux Web Workers
    */
   private offloadTasksToWorkers(): void {
-    console.log('👷 Délégation aux Web Workers...')
-    
-    // Créer un worker pour les calculs intensifs si pas déjà fait
-    if (!this.webWorkers.has('calculations')) {
-      const workerCode = `
-        self.onmessage = function(e) {
-          const { type, data } = e.data
-          
-          switch(type) {
-            case 'sort':
-              const sorted = data.sort()
-              self.postMessage({ type: 'sort', result: sorted })
-              break
-            case 'calculate':
-              // Simulation de calcul intensif
-              const result = data.reduce((sum, val) => sum + val, 0)
-              self.postMessage({ type: 'calculate', result })
-              break
-          }
-        }
-      `
-      
-      const blob = new Blob([workerCode], { type: 'application/javascript' })
-      const worker = new Worker(URL.createObjectURL(blob))
-      
-      worker.onmessage = (e) => {
-        console.log('Résultat du worker:', e.data)
-      }
-      
-      this.webWorkers.set('calculations', worker)
-    }
+  console.log('👷 Délégation aux Web Workers via WorkerPool...')
+  if(!this.workerPool){ this.workerPool = new WorkerPool(2, createComputationWorker) }
   }
 
   /**
@@ -543,9 +462,9 @@ export class PerformanceOptimizer extends EventTarget {
   private async performIntelligentPreload(): Promise<void> {
     console.log('🧠 Preload intelligent en cours...')
     
-    this.dispatchEvent(new CustomEvent('optimize', {
-      detail: { type: 'preload', action: 'anticipate' }
-    }))
+  const detail = { type: 'preload', action: 'anticipate' }
+  this.dispatchEvent(new CustomEvent('optimize', { detail }))
+  globalEventBus.emit('optimization', { rule: 'preload-intelligent-scan', timestamp: Date.now() })
     
     // Simulation du preload intelligent
     await new Promise(resolve => setTimeout(resolve, 200))
@@ -558,9 +477,9 @@ export class PerformanceOptimizer extends EventTarget {
     console.log('📝 Optimisation des changements DOM...')
     
     // Utiliser DocumentFragment pour les modifications en lot
-    this.dispatchEvent(new CustomEvent('optimize', {
-      detail: { type: 'dom', action: 'batchUpdates' }
-    }))
+  const detail = { type: 'dom', action: 'batchUpdates' }
+  this.dispatchEvent(new CustomEvent('optimize', { detail }))
+  globalEventBus.emit('optimization', { rule: 'dom-batch-updates', timestamp: Date.now() })
   }
 
   /**
@@ -608,9 +527,24 @@ export class PerformanceOptimizer extends EventTarget {
    * Dispatche la mise à jour des métriques
    */
   private dispatchMetricsUpdate(): void {
-    this.dispatchEvent(new CustomEvent('metricsUpdate', {
-      detail: this.metrics
-    }))
+  this.dispatchEvent(new CustomEvent('metricsUpdate', { detail: this.metrics }))
+  try {
+    // Enrichissement Phase 4 : tentative extraction MemoryManager globale s'il est exposé sur window
+    const mm: any = (globalThis as any).memoryManagerInstance
+    let cacheStats: any = null
+    if(mm && typeof mm.getCacheStats === 'function'){
+      try { cacheStats = mm.getCacheStats() } catch { /* ignore */ }
+    }
+    // WorkerPool metrics
+    if(this.workerPool){
+      this.metrics.workerQueueLength = (this.workerPool as any).getQueueLength?.() ?? 0
+    }
+    if(cacheStats){
+      this.metrics.cacheHitRate = cacheStats.hitRate ?? this.metrics.cacheHitRate
+      this.metrics.cacheEntries = cacheStats.totalEntries ?? this.metrics.cacheEntries
+    }
+    globalEventBus.emit('performance', { metrics: { ...this.metrics } })
+  } catch { globalEventBus.emit('performance', { metrics: { ...this.metrics } }) }
   }
 
   /**

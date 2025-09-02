@@ -1,5 +1,6 @@
 /**
  * System Integration Master - Orchestrateur principal des 7 systèmes d'optimisation
+ * (DEPRECATED Phase 2) Conserver temporairement pour compat, remplacé par event bus + modules dédiés.
  * 
  * Ce système coordonne et synchronise tous les autres systèmes d'optimisation
  * pour assurer une performance et une expérience utilisateur optimales.

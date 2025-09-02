@@ -7,38 +7,85 @@ import { DexieDeckRepository } from '../infrastructure/persistence/dexie/DexieDe
 import { DexieCardRepository } from '../infrastructure/persistence/dexie/DexieCardRepository'
 import { LocalStudySessionRepository } from '../infrastructure/persistence/LocalStudySessionRepository'
 import { DexieStudySessionRepository } from '../infrastructure/persistence/dexie/DexieStudySessionRepository'
-import { SPACED_REPETITION_SERVICE_TOKEN, SpacedRepetitionService } from './services/SpacedRepetitionService'
-import { DECK_SERVICE_TOKEN, DeckService } from './services/DeckService'
-import { CARD_SERVICE_TOKEN, CardService } from './services/CardService'
-import { STUDY_SESSION_SERVICE_TOKEN, StudySessionService } from './services/StudySessionService'
-import { STATISTICS_SERVICE_TOKEN, StatisticsService } from './services/StatisticsService'
-import { THEME_SERVICE_TOKEN, ThemeService } from './services/ThemeService'
-import { AGENDA_SCHEDULER_TOKEN, AgendaScheduler } from './services/AgendaScheduler'
-import { SEARCH_SERVICE_TOKEN, SearchService } from './services/SearchService'
-import { HEATMAP_STATS_SERVICE_TOKEN, HeatmapStatsService } from './services/HeatmapStatsService'
+import { SpacedRepetitionService } from './services/SpacedRepetitionService'
+import { DeckService } from './services/DeckService'
+import { CardService } from './services/CardService'
+import { StudySessionService } from './services/StudySessionService'
+import { StatisticsService } from './services/StatisticsService'
+import { ThemeService } from './services/ThemeService'
+import { AgendaScheduler } from './services/AgendaScheduler'
+import { SearchService } from './services/SearchService'
+import { HeatmapStatsService } from './services/HeatmapStatsService'
 import { MEDIA_REPOSITORY_TOKEN, DexieMediaRepository } from '@/infrastructure/persistence/dexie/DexieMediaRepository'
-import { SEARCH_INDEX_SERVICE_TOKEN, SearchIndexService } from './services/SearchIndexService'
+import { SearchIndexService } from './services/SearchIndexService'
+import { LearningForecastService } from './services/LearningForecastService'
+import { InsightService } from './services/InsightService'
+import { AdaptiveOrchestratorService } from './services/AdaptiveOrchestratorService'
 
-class Container { private singletons = new Map<string, any>(); register(token: string, factory: () => any){ this.singletons.set(token, factory()) } resolve<T>(token: string): T { if(!this.singletons.has(token)) throw new Error(`Dépendance non enregistrée: ${token}`); return this.singletons.get(token) } }
+class Container {
+	private instances = new Map<string, any>()
+	private factories = new Map<string, () => any>()
+	private initialized = false
+	register(token: string, factory: () => any){ this.factories.set(token, factory) }
+	private instantiate(token: string){
+		const f = this.factories.get(token)
+		if(!f) throw new Error(`Factory manquante: ${token}`)
+		const inst = f()
+		this.instances.set(token, inst)
+		return inst
+	}
+	ensureInit(){ if(!this.initialized){ registerAll(); this.initialized = true } }
+	resolve<T>(token: string): T {
+		this.ensureInit()
+		if(this.instances.has(token)) return this.instances.get(token)
+		if(!this.factories.has(token)) throw new Error(`Dépendance non enregistrée: ${token}`)
+		return this.instantiate(token)
+	}
+	safeResolve<T>(token: string): T | null {
+		try { return this.resolve<T>(token) } catch { return null }
+	}
+}
 export const container = new Container()
 function pickDeckRepo(){ try { if (typeof indexedDB !== 'undefined') { return new DexieDeckRepository() } } catch(_) {} return new LocalDeckRepository() }
 function pickCardRepo(){ try { if (typeof indexedDB !== 'undefined') { return new DexieCardRepository() } } catch(_) {} return new LocalCardRepository() }
 function pickSessionRepo(){ try { if (typeof indexedDB !== 'undefined') { return new DexieStudySessionRepository() } } catch(_) {} return new LocalStudySessionRepository() }
-container.register(DECK_REPOSITORY_TOKEN, () => pickDeckRepo())
-container.register(CARD_REPOSITORY_TOKEN, () => pickCardRepo())
-container.register(STUDY_SESSION_REPOSITORY_TOKEN, () => pickSessionRepo())
-container.register(SPACED_REPETITION_SERVICE_TOKEN, () => new SpacedRepetitionService())
-container.register(DECK_SERVICE_TOKEN, () => new DeckService())
-container.register(CARD_SERVICE_TOKEN, () => new CardService())
-container.register(STUDY_SESSION_SERVICE_TOKEN, () => new StudySessionService(
-	container.resolve(SPACED_REPETITION_SERVICE_TOKEN),
-	container.resolve(CARD_REPOSITORY_TOKEN),
-	container.resolve(STUDY_SESSION_REPOSITORY_TOKEN)
-))
-container.register(STATISTICS_SERVICE_TOKEN, () => new StatisticsService(container.resolve(CARD_REPOSITORY_TOKEN), container.resolve(DECK_REPOSITORY_TOKEN), container.resolve(STUDY_SESSION_REPOSITORY_TOKEN)))
-container.register(THEME_SERVICE_TOKEN, () => new ThemeService())
-container.register(AGENDA_SCHEDULER_TOKEN, () => new AgendaScheduler())
-container.register(SEARCH_SERVICE_TOKEN, () => new SearchService(container.resolve(CARD_REPOSITORY_TOKEN)))
-container.register(HEATMAP_STATS_SERVICE_TOKEN, () => new HeatmapStatsService(container.resolve(STUDY_SESSION_REPOSITORY_TOKEN)))
-container.register(MEDIA_REPOSITORY_TOKEN, () => new DexieMediaRepository())
-container.register(SEARCH_INDEX_SERVICE_TOKEN, () => new SearchIndexService())
+// Enregistrement lazy pour éviter ReferenceError (TDZ) si cycle d'import
+function registerAll(){
+	container.register(DECK_REPOSITORY_TOKEN, () => pickDeckRepo())
+	container.register(CARD_REPOSITORY_TOKEN, () => pickCardRepo())
+	container.register(STUDY_SESSION_REPOSITORY_TOKEN, () => pickSessionRepo())
+	container.register('SpacedRepetitionService', () => new SpacedRepetitionService())
+	container.register('LearningForecastService', () => new LearningForecastService(container.resolve(CARD_REPOSITORY_TOKEN)))
+	container.register('InsightService', () => new InsightService(
+		() => container.resolve(CARD_REPOSITORY_TOKEN),
+		() => container.resolve(STUDY_SESSION_REPOSITORY_TOKEN)
+	))
+	container.register('AdaptiveOrchestratorService', () => new AdaptiveOrchestratorService(
+		container.resolve('LearningForecastService'),
+		container.resolve('InsightService')
+	))
+	container.register('StudySessionService', () => new StudySessionService(
+		container.resolve('SpacedRepetitionService'),
+		container.resolve(CARD_REPOSITORY_TOKEN),
+		container.resolve(STUDY_SESSION_REPOSITORY_TOKEN),
+		container.resolve('AdaptiveOrchestratorService')
+	))
+	container.register('DeckService', () => new DeckService(
+		container.resolve(DECK_REPOSITORY_TOKEN),
+		container.resolve(CARD_REPOSITORY_TOKEN)
+	))
+	container.register('CardService', () => new CardService(
+		container.resolve(CARD_REPOSITORY_TOKEN)
+	))
+	container.register('StatisticsService', () => new StatisticsService(container.resolve(CARD_REPOSITORY_TOKEN), container.resolve(DECK_REPOSITORY_TOKEN), container.resolve(STUDY_SESSION_REPOSITORY_TOKEN)))
+	container.register('ThemeService', () => new ThemeService())
+	container.register('AgendaScheduler', () => new AgendaScheduler(
+		container.resolve(CARD_REPOSITORY_TOKEN)
+	))
+	container.register('SearchService', () => new SearchService(container.resolve(CARD_REPOSITORY_TOKEN)))
+	container.register('HeatmapStatsService', () => new HeatmapStatsService(container.resolve(STUDY_SESSION_REPOSITORY_TOKEN)))
+	container.register(MEDIA_REPOSITORY_TOKEN, () => new DexieMediaRepository())
+	container.register('SearchIndexService', () => new SearchIndexService(
+		container.resolve(CARD_REPOSITORY_TOKEN)
+	))
+}

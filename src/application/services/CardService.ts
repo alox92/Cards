@@ -1,12 +1,11 @@
-import { CARD_REPOSITORY_TOKEN, type CardRepository } from '../../domain/repositories/CardRepository'
-import { container } from '../Container'
+import type { CardRepository } from '../../domain/repositories/CardRepository'
 import { CardEntity, type CardCreationData } from '../../domain/entities/Card'
 import { ValidationError, ServiceError } from '@/utils/errors'
 import { logger } from '@/utils/logger'
 
 export class CardService {
   private repo: CardRepository
-  constructor(repo?: CardRepository) { this.repo = repo || container.resolve<CardRepository>(CARD_REPOSITORY_TOKEN) }
+  constructor(repo: CardRepository) { this.repo = repo }
   async create(deckId: string, data: CardCreationData): Promise<CardEntity> {
     if(!deckId) throw new ValidationError('deckId requis pour créer une carte','CARD_CREATE_MISSING_DECK')
     if(!data.frontText || !data.backText) throw new ValidationError('frontText et backText requis','CARD_CREATE_VALIDATION')
