@@ -1,17 +1,16 @@
-import { DECK_REPOSITORY_TOKEN, type DeckRepository } from '../../domain/repositories/DeckRepository'
-import { CARD_REPOSITORY_TOKEN, type CardRepository } from '../../domain/repositories/CardRepository'
+import type { DeckRepository } from '../../domain/repositories/DeckRepository'
+import type { CardRepository } from '../../domain/repositories/CardRepository'
 import { DeckEntity, type DeckCreationData } from '../../domain/entities/Deck'
 import type { CardEntity } from '../../domain/entities/Card'
-import { container } from '../Container'
 import { ValidationError, NotFoundError, ServiceError } from '@/utils/errors'
 import { logger } from '@/utils/logger'
 
 export class DeckService {
   private deckRepo: DeckRepository
   private cardRepo: CardRepository
-  constructor(deckRepo?: DeckRepository, cardRepo?: CardRepository) {
-    this.deckRepo = deckRepo || container.resolve<DeckRepository>(DECK_REPOSITORY_TOKEN)
-    this.cardRepo = cardRepo || container.resolve<CardRepository>(CARD_REPOSITORY_TOKEN)
+  constructor(deckRepo: DeckRepository, cardRepo: CardRepository) {
+    this.deckRepo = deckRepo
+    this.cardRepo = cardRepo
   }
   async listDecks(): Promise<DeckEntity[]> { return this.deckRepo.getAll() }
   async listDecksWithStats(): Promise<DeckEntity[]> {

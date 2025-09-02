@@ -290,6 +290,10 @@ const StudyServiceDeckPage: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* FAB nouveau (redirige vers éditeur riche complet) */}
+      {deckId && (
+        <button onClick={()=> navigate(`/card-editor/${deckId}`)} className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-to-br from-blue-600 to-sky-500 text-white shadow-lg text-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition z-40" title="Éditeur avancé">📝</button>
+      )}
       {studySelectionActive && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col">

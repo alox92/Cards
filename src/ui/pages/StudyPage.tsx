@@ -15,6 +15,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useSettingsStore } from '@/data/stores/settingsStore'
 import useDecksService from '@/ui/hooks/useDecksService'
 import { getIntelligentLearningSystem, IntelligentLearningSystem } from '../../core/IntelligentLearningSystem'
+import useLearningProfile from '@/ui/hooks/useLearningProfile'
 import { getFluidTransitionMastery, FluidTransitionMastery } from '../../core/FluidTransitionMastery'
 import StudyHeatmap from '@/ui/components/Stats/StudyHeatmap'
 import OcclusionStudyCard from '@/ui/components/Occlusion/OcclusionStudyCard'
@@ -30,7 +31,8 @@ const StudyPage = () => {
   const { decks, loading: decksLoading } = useDecksService()
   const [selectedMode, setSelectedMode] = useState<StudyMode | null>(null)
   const [showMenu, setShowMenu] = useState(true)
-  const recommendations: any[] = []
+  // Recommandations dynamiques (Phase 5)
+  const [recommendations, setRecommendations] = useState<any[]>([])
 
   // Références (instances stables, évite ré-inits multiples en StrictMode)
   const learningSystemRef = useRef<IntelligentLearningSystem | null>(getIntelligentLearningSystem())
@@ -49,8 +51,26 @@ const StudyPage = () => {
         // Initialiser le Fluid Transition Mastery (idempotent)
         await transitionSystemRef.current?.initialize()
 
-        // Charger les recommandations
-  // Recommandations désactivées (migration)
+        // Charger les recommandations initiales + abonner aux mises à jour
+        const ils = learningSystemRef.current
+        if(ils){
+          try {
+            // Première génération (si déjà prête)
+            const current = ils.getRecommendations?.() || []
+            if(current.length) setRecommendations(current)
+            // Listener
+            const handler = (e: any) => {
+              setRecommendations([...(e.detail || [])])
+            }
+            ils.addEventListener('recommendations', handler as any)
+            // Forcer une régénération si vide (éventuel retard init)
+            if(!current.length){
+              void ils.generateRecommendations?.().then(r => { if(r?.length) setRecommendations([...(r)]) })
+            }
+            // Cleanup listener lors unmount
+            return () => ils.removeEventListener('recommendations', handler as any)
+          } catch(err){ console.warn('StudyPage recommandations listener error', err) }
+        }
 
         // Charger les decks
   // TODO: charger les decks via deckService quand migration complète
@@ -64,9 +84,7 @@ const StudyPage = () => {
     initializeSystems()
 
     return () => {
-      // Nettoyage
-  learningSystemRef.current?.cleanup()
-  // Pas de shutdown ici (singleton partagé)
+      // Nettoyage spécifique page (pas de cleanup global du singleton ici)
     }
   }, [])
 
@@ -76,6 +94,27 @@ const StudyPage = () => {
   // Appel inconditionnel du hook pour préserver l'ordre des hooks (deckId peut être undefined)
   const sessionHook = useServiceStudySession({ deckId })
   const { settings: globalSettings, updateSettings } = useSettingsStore()
+  const learningState = useLearningProfile()
+  const [sessionAlerts, setSessionAlerts] = useState<{ id:string; msg:string }[]>([])
+
+  // Détection chute accuracy (comparaison glissante) pendant la session
+  useEffect(()=>{
+    if(!learningState.profile) return
+    const acc = learningState.profile.performance.overallAccuracy
+    setSessionAlerts(prev => {
+      const last = prev.slice(-5)
+      const accuracyPoints = (last as any).accuracySeries || []
+      const series = [...accuracyPoints.slice(-19), acc]
+      const base = series.length > 3 ? series.slice(0, -1).reduce((a,b)=>a+b,0)/(series.length-1) : acc
+      const drop = base ? ((base - acc)/base)*100 : 0
+      const alerts = [...prev.filter(a=> a.id !== 'acc-drop')]
+      if(drop > 20){
+        alerts.push({ id:'acc-drop', msg:`Baisse de précision ${drop.toFixed(1)}% – suggéré: micro‑pause ou révision ciblée.` })
+      }
+      ;(alerts as any).accuracySeries = series
+      return alerts
+    })
+  }, [learningState.profile?.performance.overallAccuracy])
   const [elapsedMs, setElapsedMs] = useState(0)
   const [showBack, setShowBack] = useState(false)
 
@@ -343,6 +382,15 @@ const StudyPage = () => {
         )}
         
         {/* Modes d'étude */}
+        {sessionAlerts.length > 0 && (
+          <div className="mb-6 space-y-2">
+            {sessionAlerts.map(a=> (
+              <div key={a.id} className="rounded bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 px-3 py-2 text-sm border border-amber-300/40">
+                ⚠️ {a.msg}
+              </div>
+            ))}
+          </div>
+        )}
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
             { key:'review', icon:'🔁', title:'Révision IA', desc:"Répétition espacée (SM-2)" },

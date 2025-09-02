@@ -18,6 +18,7 @@ export interface CacheEntry<T = any> {
 }
 
 export type CachePriority = 'low' | 'normal' | 'high' | 'critical'
+import { globalEventBus } from './eventBus'
 
 export interface CacheStats {
   totalEntries: number
@@ -99,6 +100,7 @@ export class MemoryManager extends EventTarget {
     }
     
     this.initialize()
+  ;(globalThis as any).memoryManagerInstance = this
   }
 
   /**
@@ -272,9 +274,9 @@ export class MemoryManager extends EventTarget {
         this.cache.set(key, entry)
         this.updateStats()
         
-        this.dispatchEvent(new CustomEvent('cached', {
-          detail: { key, size, compressed: options.compress }
-        }))
+  this.dispatchEvent(new CustomEvent('cached', { detail: { key, size, compressed: options.compress } }))
+  globalEventBus.emit('cache', { action: 'cached', key })
+        // (Phase 2) Future: globalEventBus.emit('cache', { action: 'cached', key })
 
         resolve(true)
         
@@ -333,9 +335,8 @@ export class MemoryManager extends EventTarget {
     this.cache.delete(key)
     this.updateStats()
     
-    this.dispatchEvent(new CustomEvent('evicted', {
-      detail: { key, reason: 'manual' }
-    }))
+  this.dispatchEvent(new CustomEvent('evicted', { detail: { key, reason: 'manual' } }))
+  globalEventBus.emit('cache', { action: 'evicted', key })
 
     return true
   }
@@ -349,9 +350,8 @@ export class MemoryManager extends EventTarget {
     this.stats.evictionCount += oldSize
     this.updateStats()
     
-    this.dispatchEvent(new CustomEvent('cleared', {
-      detail: { entriesRemoved: oldSize }
-    }))
+  this.dispatchEvent(new CustomEvent('cleared', { detail: { entriesRemoved: oldSize } }))
+  globalEventBus.emit('cache', { action: 'cleared' })
   }
 
   /**
@@ -704,6 +704,9 @@ export class MemoryManager extends EventTarget {
     const total = this.stats.totalHits + this.stats.totalMisses
     this.stats.hitRate = total > 0 ? (this.stats.totalHits / total) * 100 : 0
   }
+
+  /** Accès externe lecture seule aux stats cache (Phase 4) */
+  public getCacheStats(): CacheStats { return { ...this.stats } }
 
   /**
    * Met à jour les statistiques mémoire

@@ -18,6 +18,7 @@ import DecksPage from '@/ui/pages/DecksPage'
 import StudyPage from '@/ui/pages/StudyPage'
 import StudyServiceDeckPage from '@/ui/pages/StudyServiceDeckPage'
 import CardEditorPage from '@/ui/pages/CardEditorPage'
+import CreateCardPage from '@/ui/pages/CreateCardPage'
 import StatsPage from '@/ui/pages/StatsPage'
 import AdvancedStatsPage from '@/ui/pages/AdvancedStatsPage'
 import MediaArchivePage from '@/ui/pages/MediaArchivePage'
@@ -37,7 +38,8 @@ export const appRoutes: AppRouteMeta[] = [
   { id:'decks', path:'/decks', label:'Paquets', icon:'📚', category:'organize', element: DecksPage, order:1 },
   { id:'study-service', path:'/study-service', label:'Étude', icon:'⚡', category:'learn', element: StudyServiceDeckPage, order:0 },
   { id:'study', path:'/study', label:'Étude (legacy)', icon:'🗂️', category:'learn', element: StudyPage, legacy:true, order:1 },
-  { id:'card-editor', path:'/card-editor/:deckId', label:'Nouvelle carte', icon:'✍️', category:'create', element: CardEditorPage, order:0 },
+  { id:'create-card', path:'/create', label:'Créer carte', icon:'✍️', category:'create', element: CreateCardPage, order:-1 },
+  { id:'card-editor', path:'/card-editor/:deckId', label:'Nouvelle carte', icon:'📝', category:'create', element: CardEditorPage, order:0 },
   { id:'stats', path:'/stats', label:'Statistiques', icon:'📊', category:'analyze', element: StatsPage, order:0 },
   { id:'advanced-stats', path:'/advanced-stats', label:'Avancées', icon:'📈', category:'analyze', element: AdvancedStatsPage, order:1 },
   { id:'media-archive', path:'/media-archive', label:'Médias', icon:'🗄️', category:'organize', element: MediaArchivePage, order:2 },

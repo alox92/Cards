@@ -149,6 +149,7 @@ export interface SessionFeedback {
 }
 
 import { logger } from '@/utils/logger'
+import { eventBus } from '@/core/events/EventBus'
 
 export class IntelligentLearningSystem extends EventTarget {
   private profile: LearningProfile | null = null
@@ -163,6 +164,8 @@ export class IntelligentLearningSystem extends EventTarget {
   }
   
   private readonly INITIAL_INTERVAL = 1
+  // Statistiques internes (non persistées directement) utilisées pour recalculer la performance
+  private _counters = { totalReviews: 0, correctReviews: 0 }
 
   constructor() {
     super()
@@ -188,8 +191,38 @@ export class IntelligentLearningSystem extends EventTarget {
     
     // Générer les recommandations initiales
     await this.generateRecommendations()
+
+    // S'abonner aux événements d'étude (card.reviewed) pour mises à jour en temps réel (Phase 5)
+    eventBus.subscribe('card.reviewed', (ev: any) => {
+      try { this._onCardReviewed(ev.payload) } catch(e){ /* eslint-disable no-console */ console.warn('ILS card.reviewed handler error', e) }
+    })
     
     console.log('✅ Intelligent Learning System initialisé')
+  }
+
+  /** Gestion d'un événement card.reviewed pour ajuster le profil et potentiellement régénérer les recommandations */
+  private _onCardReviewed(payload: { quality: number }){
+    if(!this.profile) return
+    this._counters.totalReviews++
+    if(payload.quality >= 3) this._counters.correctReviews++
+    const acc = this._counters.totalReviews ? (this._counters.correctReviews / this._counters.totalReviews) * 100 : 0
+    // Lissage simple EMA pour éviter oscillations extrêmes
+    const alpha = 0.3
+    this.profile.performance.overallAccuracy = this.profile.performance.overallAccuracy === 0
+      ? acc
+      : (alpha * acc + (1-alpha) * this.profile.performance.overallAccuracy)
+    // Mise à jour rétention approximative (placeholder) : retenir EF moyenne implicite
+    this.profile.performance.retentionRate = Math.min(100, Math.max(0, this.profile.performance.overallAccuracy * 0.9))
+    // Maîtrise basique : log transform des revues correctes
+    this.profile.performance.masteryLevel = Math.round(Math.log10(1 + this._counters.correctReviews) * 25)
+    // Sauvegarde batchée
+    this.saveProfile()
+    // Régénérer toutes les 5 revues pour limiter le coût
+    if(this._counters.totalReviews % 5 === 0){
+      void this.generateRecommendations()
+    }
+    // Émettre un event DOM pour UI fine-grain (ex: hooks)
+    try { this.dispatchEvent(new CustomEvent('learningProfileUpdated', { detail: { performance: { ...this.profile.performance } } })) } catch {}
   }
 
   /**
@@ -804,6 +837,45 @@ export class IntelligentLearningSystem extends EventTarget {
       })
     }
 
+    // Haute précision -> proposer d'augmenter la difficulté / nouveaux contenus
+    if (this.profile.performance.overallAccuracy >= 90) {
+      recommendations.push({
+        type: 'difficulty',
+        priority: 'medium',
+        title: 'Augmenter la difficulté',
+        description: 'Votre précision est élevée. Introduisez des cartes plus complexes pour stimuler la progression.',
+        action: 'adjust-difficulty-up',
+        estimatedBenefit: 0.7,
+        confidence: 0.85
+      })
+    }
+
+    // Rétention faible -> sessions courtes supplémentaires
+    if (this.profile.performance.retentionRate > 0 && this.profile.performance.retentionRate < 60) {
+      recommendations.push({
+        type: 'review',
+        priority: 'high',
+        title: 'Renforcer la rétention',
+        description: 'Ajoutez 1–2 micro‑sessions (5 min) aujourd\'hui pour consolider les cartes fragiles.',
+        action: 'add-micro-session',
+        estimatedBenefit: 0.75,
+        confidence: 0.75
+      })
+    }
+
+    // Streak élevé mais précision moyenne -> introduire challenge contrôlé
+    if (this.profile.streaks.currentStreak >= 5 && this.profile.performance.overallAccuracy >= 70 && this.profile.performance.overallAccuracy < 90) {
+      recommendations.push({
+        type: 'study',
+        priority: 'medium',
+        title: 'Session challenge',
+        description: 'Introduisez un lot restreint de cartes plus difficiles pour accélérer la maîtrise.',
+        action: 'start-challenge-set',
+        estimatedBenefit: 0.65,
+        confidence: 0.7
+      })
+    }
+
     // Recommandation basée sur les streaks
     if (this.profile.streaks.currentStreak === 0) {
       recommendations.push({
@@ -839,8 +911,20 @@ export class IntelligentLearningSystem extends EventTarget {
       return b.estimatedBenefit - a.estimatedBenefit
     })
 
-    this.recommendations = recommendations
-    return recommendations
+    // Dédupliquer par action (garde la première de plus haute priorité déjà triée)
+    const seen = new Set<string>()
+    const deduped: LearningRecommendation[] = []
+    for(const r of recommendations){
+      if(!seen.has(r.action)) { seen.add(r.action); deduped.push(r) }
+    }
+
+    // Limiter stockage interne (ex: top 10) pour éviter croissance mémoire
+    this.recommendations = deduped.slice(0, 10)
+
+    // Émettre un événement pour la couche UI (EventTarget)
+    try { this.dispatchEvent(new CustomEvent('recommendations', { detail: this.recommendations })) } catch {}
+
+    return this.recommendations
   }
 
   /**
@@ -852,6 +936,11 @@ export class IntelligentLearningSystem extends EventTarget {
     try {
       localStorage.setItem('ariba-learning-profile', JSON.stringify(this.profile))
   this._recordILSEvent('save')
+      // Phase 5: export public (dev tooling) – tentative (ignore si non navigateur ou FS non dispo)
+      try {
+        // Expose sur window pour scripts externes qui écrivent le fichier côté build step
+        ;(globalThis as any).__ARIBA_LAST_PROFILE__ = this.profile
+      } catch { /* ignore */ }
     } catch (error) {
   logger.error('ILS','Erreur sauvegarde profil',{ error: (error as any)?.message || error })
     }

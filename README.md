@@ -7,6 +7,22 @@ Application de cartes flash avancée avec **7 systèmes d'optimisation** pour l'
 ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 
+## 🗂️ Phases d'Optimisation
+
+- Phase 1: Base performance (lazy routes, GPU warmup isolé, web vitals dev, accessibilité skip link).
+- Phase 2: Event bus global, externalisation des règles d'optimisation, WorkerPool, instrumentation réseau (fetch tracker), dépréciation SystemIntegrationMaster.
+- Phase 3: Réactivation PWA, bridge gamification initial, test PWA, store performance (pendingRequests), diagnostics param URL.
+- Phase 4: Micro-benchmarks Vitest (`npm run bench`), script smoke perf (`npm run perf:smoke`), bannière offline, panneau diagnostics enrichi (pending requests, mémoire, dernière optimisation), stratégie Workbox API (NetworkFirst), bridge gamification XP/session.
+
+### Phase 5: Personnalisation & Adaptation
+
+- Recommandations dynamiques multi-règles (performance, rétention, streak, challenge).
+- Scoring adaptatif de la file d'étude (due + difficulté + rétention).
+- Historique apprentissage `learning-history.json` + gate `npm run perf:learn:check` (chute accuracy >15%).
+- Hook `useLearningProfile` + événements `learningProfileUpdated` & `recommendations`.
+- Sparklines Accuracy / Mastery dans le panneau diagnostics + top recommandations.
+- Alertes in-session (baisse de précision >20%) pour micro‑pause / ajustement.
+
 ## ✨ Fonctionnalités Principales
 
 ### 🧠 7 Systèmes d'Optimisation Révolutionnaires
@@ -14,10 +30,12 @@ Application de cartes flash avancée avec **7 systèmes d'optimisation** pour l'
 1. **🎨 Advanced Rendering System** - Performance de rendu optimisée avec WebGL
 2. **🧠 Algorithmic Optimization Engine** - Algorithmes d'IA avec Web Workers
 3. **⚡ Performance Optimizer** - Monitoring temps réel des métriques
-4. **🎯 System Integration Master** - Orchestration globale des systèmes
+4. **🎯 System Integration Master** (déprécié) - remplacé par bus d'événements + règles externalisées
 5. **📚 Intelligent Learning System** - IA d'apprentissage adaptatif
 6. **🌊 Fluid Transition Mastery** - Animations fluides avancées
 7. **💾 Memory Manager** - Gestion intelligente de la mémoire
+8. **🌐 Fetch Tracker** - Instrumentation réseau (pending/total requests)
+9. **👷 Worker Pool** - Délégation tâches lourdes multi-workers
 
 ### 🎮 Modes d'Étude Interactifs
 
