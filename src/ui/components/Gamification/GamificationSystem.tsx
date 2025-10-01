@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { getFluidTransitionMastery, FluidTransitionMastery } from '../../../core/FluidTransitionMastery'
+import { logger } from '@/utils/logger'
 
 interface GamificationProps {
   onLevelUp?: (newLevel: number) => void
@@ -116,7 +117,7 @@ export const GamificationSystem: React.FC<GamificationProps> = ({
         setAchievements(data.achievements || [])
       }
     } catch (error) {
-      console.warn('Erreur lors du chargement des données de gamification:', error)
+      logger.warn('GamificationSystem', 'Erreur lors du chargement des données de gamification', { error })
     }
   }
 
@@ -126,7 +127,7 @@ export const GamificationSystem: React.FC<GamificationProps> = ({
       const data = { levelInfo, streak, achievements }
       localStorage.setItem(`ariba-gamification-${userId}`, JSON.stringify(data))
     } catch (error) {
-      console.warn('Erreur lors de la sauvegarde:', error)
+      logger.warn('GamificationSystem', 'Erreur lors de la sauvegarde', { error })
     }
   }, [levelInfo, streak, achievements, userId])
 
@@ -1046,21 +1047,4 @@ export const GamificationSystem: React.FC<GamificationProps> = ({
 }
 
 // Hook pour utiliser le système de gamification
-export const useGamification = () => {
-  const triggerEvent = useCallback((event: string, data: any = {}) => {
-    if (window && (window as any).aribaGamification) {
-      (window as any).aribaGamification.triggerEvent(event, data)
-    }
-  }, [])
-
-  const addXP = useCallback((amount: number, reason?: string) => {
-    if (window && (window as any).aribaGamification) {
-      (window as any).aribaGamification.addXP(amount, reason)
-    }
-  }, [])
-
-  return {
-    triggerEvent,
-    addXP
-  }
-}
+// Hook déplacé vers useGamification.ts pour respecter react-refresh/only-export-components

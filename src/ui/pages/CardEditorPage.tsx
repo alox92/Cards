@@ -8,6 +8,8 @@ import { DECK_SERVICE_TOKEN, DeckService } from '@/application/services/DeckServ
 import OcclusionEditor from '@/ui/components/Occlusion/OcclusionEditor'
 import { compressImageToDataUrl, estimateDataUrlSize } from '@/utils/imageCompression'
 import { MEDIA_REPOSITORY_TOKEN, DexieMediaRepository } from '@/infrastructure/persistence/dexie/DexieMediaRepository'
+import { escapeHtml } from '@/utils/sanitize'
+import { logger } from '@/utils/logger'
 
 const CardEditorPage = () => {
   const navigate = useNavigate()
@@ -31,6 +33,15 @@ const CardEditorPage = () => {
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => { if(deckId){ deckService.getDeck(deckId).then(d=> d && setDeckName(d.name)) } }, [deckId, deckService])
+
+  const renderPreview = (text: string) => {
+    const esc = escapeHtml(text)
+    return esc
+      .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g,'<em>$1</em>')
+      .replace(/`(.*?)`/g,'<code>$1</code>')
+      .replace(/\n/g,'<br>')
+  }
 
   const handleSave = async () => {
     if (!frontText.trim() || !backText.trim() || !deckId) {
@@ -56,10 +67,10 @@ const CardEditorPage = () => {
       let frontImageRef: string|undefined
       let backImageRef: string|undefined
       if(frontImage){
-  try { const blob = await dataUrlToBlob(frontImage); const ref = await mediaRepo.save(blob,'image', blob.type); mediaRefs.push(ref); frontImageRef = ref.id } catch(e){ console.warn('Erreur sauvegarde image recto', e) }
+  try { const blob = await dataUrlToBlob(frontImage); const ref = await mediaRepo.save(blob,'image', blob.type); mediaRefs.push(ref); frontImageRef = ref.id } catch(e){ logger.warn('CardEditor', 'Erreur sauvegarde image recto', { e }) }
       }
       if(backImage){
-  try { const blob = await dataUrlToBlob(backImage); const ref = await mediaRepo.save(blob,'image', blob.type); mediaRefs.push(ref); backImageRef = ref.id } catch(e){ console.warn('Erreur sauvegarde image verso', e) }
+  try { const blob = await dataUrlToBlob(backImage); const ref = await mediaRepo.save(blob,'image', blob.type); mediaRefs.push(ref); backImageRef = ref.id } catch(e){ logger.warn('CardEditor', 'Erreur sauvegarde image verso', { e }) }
       }
       await cardService.create(deckId, {
         frontText: front,
@@ -76,7 +87,7 @@ const CardEditorPage = () => {
       } as any)
       navigate(`/study-service/${deckId}`)
     } catch (error) {
-      console.error('Erreur lors de la création de la carte:', error)
+      logger.error('CardEditor', 'Erreur création carte', { error })
       alert('Erreur lors de la création de la carte')
     } finally {
       setIsLoading(false)
@@ -174,7 +185,7 @@ const CardEditorPage = () => {
                       if(!confirm(`Image compressée mais toujours volumineuse (${(size/1024).toFixed(0)} Ko). Continuer ?`)) return
                     }
                     setFrontImage(compressed)
-                  } catch(err){ console.error('Compression image échouée', err) }
+                  } catch(err){ logger.error('CardEditorPage', 'Compression image échouée', { err }) }
                 }} />
                 {frontImage && (
                   <div className="mt-2 relative group">
@@ -188,7 +199,7 @@ const CardEditorPage = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">🖼️ Image (verso)</label>
                 <input type="file" accept="image/*" className="text-xs" onChange={async e=> {
                   const file = e.target.files?.[0]; if(!file) return;
-                  try { const compressed = await compressImageToDataUrl(file); setBackImage(compressed) } catch(err){ console.error(err) }
+                  try { const compressed = await compressImageToDataUrl(file); setBackImage(compressed) } catch(err){ logger.error('CardEditorPage', 'Compression image verso échouée', { err }) }
                 }} />
                 {backImage && (
                   <div className="mt-2 relative group">
@@ -284,28 +295,12 @@ const CardEditorPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-h-[120px]">
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">Recto :</div>
-              <div 
-                className="prose prose-sm dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ 
-                  __html: frontText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                                    .replace(/`(.*?)`/g, '<code>$1</code>')
-                                    .replace(/\n/g, '<br>') 
-                }}
-              />
+              <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: renderPreview(frontText) }} />
             </div>
             
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-h-[120px]">
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">Verso :</div>
-              <div 
-                className="prose prose-sm dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ 
-                  __html: backText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                  .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                                  .replace(/`(.*?)`/g, '<code>$1</code>')
-                                  .replace(/\n/g, '<br>') 
-                }}
-              />
+              <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: renderPreview(backText) }} />
             </div>
           </div>
 

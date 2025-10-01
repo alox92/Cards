@@ -73,8 +73,8 @@ export interface AdaptationHistory {
   timestamp: number
   type: AdaptationType
   reason: string
-  oldValue: any
-  newValue: any
+  oldValue: unknown
+  newValue: unknown
   effectiveness: number // 0-1
 }
 
@@ -94,7 +94,7 @@ export interface LearningRecommendation {
   action: string
   estimatedBenefit: number
   confidence: number
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface StudySession {
@@ -159,7 +159,7 @@ export class IntelligentLearningSystem extends EventTarget {
   private _batch = {
     saves: 0,
     cleanups: 0,
-    timer: 0 as any,
+    timer: 0 as unknown as ReturnType<typeof setTimeout>,
     lastFlush: Date.now()
   }
   
@@ -167,21 +167,34 @@ export class IntelligentLearningSystem extends EventTarget {
   // Statistiques internes (non persistées directement) utilisées pour recalculer la performance
   private _counters = { totalReviews: 0, correctReviews: 0 }
 
-  constructor() {
+  // Pattern Singleton threadsafe
+  private static _instance: IntelligentLearningSystem | null = null
+  private static _initPromise: Promise<void> | null = null
+
+  private constructor() {
     super()
-    // Empêcher double initialisation en dev (StrictMode) via flag statique
-    if((IntelligentLearningSystem as any)._initialized){
-      return
+  }
+
+  /**
+   * Récupère l'instance unique (pattern Singleton threadsafe)
+   */
+  public static getInstance(): IntelligentLearningSystem {
+    if (!IntelligentLearningSystem._instance) {
+      IntelligentLearningSystem._instance = new IntelligentLearningSystem()
+      
+      // Initialisation async isolée
+      if (!IntelligentLearningSystem._initPromise) {
+        IntelligentLearningSystem._initPromise = IntelligentLearningSystem._instance.initialize()
+      }
     }
-    ;(IntelligentLearningSystem as any)._initialized = true
-    this.initialize()
+    return IntelligentLearningSystem._instance
   }
 
   /**
    * Initialise le système d'apprentissage
    */
   private async initialize(): Promise<void> {
-    console.log('🧠 Initialisation de l\'Intelligent Learning System...')
+    logger.info('IntelligentLearningSystem', '🧠 Initialisation de l\'Intelligent Learning System...')
     
     // Charger ou créer le profil d'apprentissage
     await this.loadOrCreateProfile()
@@ -193,11 +206,11 @@ export class IntelligentLearningSystem extends EventTarget {
     await this.generateRecommendations()
 
     // S'abonner aux événements d'étude (card.reviewed) pour mises à jour en temps réel (Phase 5)
-    eventBus.subscribe('card.reviewed', (ev: any) => {
-      try { this._onCardReviewed(ev.payload) } catch(e){ /* eslint-disable no-console */ console.warn('ILS card.reviewed handler error', e) }
+    eventBus.subscribe('card.reviewed', (ev: { payload: { cardId: string; quality: number; responseTime: number } }) => {
+      try { this._onCardReviewed(ev.payload) } catch(e){ logger.warn('IntelligentLearningSystem', 'ILS card.reviewed handler error', { error: e }) }
     })
     
-    console.log('✅ Intelligent Learning System initialisé')
+    logger.info('IntelligentLearningSystem', '✅ Intelligent Learning System initialisé')
   }
 
   /** Gestion d'un événement card.reviewed pour ajuster le profil et potentiellement régénérer les recommandations */
@@ -235,9 +248,9 @@ export class IntelligentLearningSystem extends EventTarget {
     if (savedProfile) {
       try {
         this.profile = JSON.parse(savedProfile)
-        console.log('📊 Profil d\'apprentissage chargé')
+        logger.info('IntelligentLearningSystem', '📊 Profil d\'apprentissage chargé')
       } catch (error) {
-        console.warn('Erreur lors du chargement du profil:', error)
+        logger.warn('IntelligentLearningSystem', 'Erreur lors du chargement du profil', { error })
         this.createNewProfile()
       }
     } else {
@@ -292,7 +305,7 @@ export class IntelligentLearningSystem extends EventTarget {
       adaptations: []
     }
 
-    console.log('👤 Nouveau profil d\'apprentissage créé')
+    logger.info('IntelligentLearningSystem', '👤 Nouveau profil d\'apprentissage créé')
   }
 
   /**
@@ -327,7 +340,7 @@ export class IntelligentLearningSystem extends EventTarget {
       }
     }
 
-    console.log('🎯 Session d\'étude démarrée:', this.currentSession.id)
+    logger.info('IntelligentLearningSystem', '🎯 Session d\'étude démarrée', { sessionId: this.currentSession.id })
     
     this.dispatchEvent(new CustomEvent('sessionStarted', {
       detail: this.currentSession
@@ -361,7 +374,7 @@ export class IntelligentLearningSystem extends EventTarget {
     // Sauvegarder le profil
     this.saveProfile()
     
-    console.log('📈 Session d\'étude terminée avec succès')
+    logger.info('IntelligentLearningSystem', '📈 Session d\'étude terminée avec succès')
     
     this.dispatchEvent(new CustomEvent('sessionEnded', {
       detail: { session: this.currentSession, feedback }
@@ -417,7 +430,7 @@ export class IntelligentLearningSystem extends EventTarget {
       await this.adaptCardDifficulty(studyCard)
     }
 
-    console.log(`📝 Réponse traitée pour carte ${cardId}: qualité ${response.quality}`)
+    logger.info('IntelligentLearningSystem', `📝 Réponse traitée pour carte ${cardId}`, { quality: response.quality })
     
     this.dispatchEvent(new CustomEvent('cardProcessed', {
       detail: { cardId, studyCard, response: fullResponse }
@@ -545,7 +558,7 @@ export class IntelligentLearningSystem extends EventTarget {
       this.profile.adaptations.push(adaptation)
       this.currentSession?.adaptations.push(adaptation)
 
-      console.log(`🎯 Difficulté adaptée pour carte ${card.cardId}: ${oldDifficulty} → ${newDifficulty}`)
+      logger.info('IntelligentLearningSystem', `🎯 Difficulté adaptée pour carte ${card.cardId}`, { oldDifficulty, newDifficulty })
     }
   }
 
@@ -576,7 +589,7 @@ export class IntelligentLearningSystem extends EventTarget {
     // Mettre à jour les statistiques
   this.currentSession.performance.difficultiesEncountered = errorPatterns
     
-    console.log(`📊 Analyse de session: ${accuracy.toFixed(1)}% précision, variance qualité: ${qualityVariance.toFixed(2)}`)
+    logger.info('IntelligentLearningSystem', `📊 Analyse de session`, { accuracy: accuracy.toFixed(1), qualityVariance: qualityVariance.toFixed(2) })
 
   // Analyse terminée
   }
@@ -655,7 +668,7 @@ export class IntelligentLearningSystem extends EventTarget {
     // Mettre à jour les objectifs
     this.updateGoalProgress()
 
-    console.log('📈 Profil d\'apprentissage mis à jour')
+    logger.info('IntelligentLearningSystem', '📈 Profil d\'apprentissage mis à jour')
   }
 
   /**
@@ -806,14 +819,14 @@ export class IntelligentLearningSystem extends EventTarget {
   private async analyzeUserBehavior(): Promise<void> {
     if (!this.profile) return
 
-    console.log('🔍 Analyse du comportement utilisateur...')
+    logger.info('IntelligentLearningSystem', '🔍 Analyse du comportement utilisateur...')
 
     // Analyser les patterns temporels
     // Analyser les préférences de difficulté
     // Analyser les styles d'apprentissage
     // Cette méthode serait étendue avec de vraies analyses ML
 
-    console.log('✅ Analyse comportementale terminée')
+    logger.info('IntelligentLearningSystem', '✅ Analyse comportementale terminée')
   }
 
   /**
@@ -939,10 +952,10 @@ export class IntelligentLearningSystem extends EventTarget {
       // Phase 5: export public (dev tooling) – tentative (ignore si non navigateur ou FS non dispo)
       try {
         // Expose sur window pour scripts externes qui écrivent le fichier côté build step
-        ;(globalThis as any).__ARIBA_LAST_PROFILE__ = this.profile
+        ;(globalThis as unknown as Record<string, unknown>).__ARIBA_LAST_PROFILE__ = this.profile
       } catch { /* ignore */ }
     } catch (error) {
-  logger.error('ILS','Erreur sauvegarde profil',{ error: (error as any)?.message || error })
+  logger.error('ILS','Erreur sauvegarde profil',{ error: error instanceof Error ? error.message : String(error) })
     }
   }
 
@@ -998,7 +1011,7 @@ export class IntelligentLearningSystem extends EventTarget {
     // Nettoyage timer si existant
     if(this._batch.timer){
       clearTimeout(this._batch.timer)
-      this._batch.timer = 0 as any
+      this._batch.timer = 0 as unknown as ReturnType<typeof setTimeout>
     }
   }
 
@@ -1015,7 +1028,7 @@ export class IntelligentLearningSystem extends EventTarget {
     if(!this._batch.timer){
       this._batch.timer = setTimeout(()=>{
         this._flushILSEvents()
-        this._batch.timer = 0 as any
+        this._batch.timer = 0 as unknown as ReturnType<typeof setTimeout>
       }, 5000)
     }
     // Si rafale très importante, flush anticipé
@@ -1036,9 +1049,7 @@ export class IntelligentLearningSystem extends EventTarget {
   }
 }
 
-// Singleton global simple pour éviter multiples cycles init/cleanup
-let __ilsSingleton: IntelligentLearningSystem | null = null
+// Singleton global utilise getInstance()
 export function getIntelligentLearningSystem(): IntelligentLearningSystem {
-  if(!__ilsSingleton){ __ilsSingleton = new IntelligentLearningSystem() }
-  return __ilsSingleton
+  return IntelligentLearningSystem.getInstance()
 }

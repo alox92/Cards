@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { container } from '@/application/Container'
+import { highlightAndSanitize } from '@/utils/sanitize'
 import { CARD_SERVICE_TOKEN, CardService } from '@/application/services/CardService'
 import { DECK_SERVICE_TOKEN, DeckService } from '@/application/services/DeckService'
 import { SEARCH_SERVICE_TOKEN, SearchService } from '@/application/services/SearchService'
@@ -166,20 +167,20 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({ onSelectCard, 
               <div className="flex items-start justify-between">
                 <div className="flex-1 pr-2">
                   <div className="font-medium flex items-center gap-2">
-                    {r.type === 'deck' ? '🗂️' : '🃏'} <span dangerouslySetInnerHTML={{ __html: r.title.replace(new RegExp(query,'ig'), m=>`<mark>${m}</mark>`) }} />
+                    {r.type === 'deck' ? '🗂️' : '🃏'} <span dangerouslySetInnerHTML={{ __html: highlightAndSanitize(r.title, query) }} />
                     {r.type === 'deck' && <span className="text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 px-2 py-0.5 rounded-full">Deck</span>}
                     {r.type === 'card' && <span className="text-xs bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300 px-2 py-0.5 rounded-full">Card</span>}
                   </div>
-                  {r.subtitle && <div className="text-xs opacity-80 line-clamp-1" dangerouslySetInnerHTML={{ __html: r.subtitle.replace(new RegExp(query,'ig'), m=>`<mark>${m}</mark>`) }} />}
+                  {r.subtitle && <div className="text-xs opacity-80 line-clamp-1" dangerouslySetInnerHTML={{ __html: highlightAndSanitize(r.subtitle, query) }} />}
                   {r.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {r.tags.slice(0,6).map(t => (
-                        <span key={t} className="text-[10px] px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full" dangerouslySetInnerHTML={{ __html: t.replace(new RegExp(query,'ig'), m=>`<mark>${m}</mark>`) }} />
+                        <span key={t} className="text-[10px] px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full" dangerouslySetInnerHTML={{ __html: highlightAndSanitize(t, query) }} />
                       ))}
                     </div>
                   )}
                 </div>
-                {r.contentPreview && <div className="hidden md:block w-40 text-[10px] italic opacity-70 line-clamp-4" dangerouslySetInnerHTML={{ __html: r.contentPreview.replace(new RegExp(query,'ig'), m=>`<mark>${m}</mark>`) }} />}
+                {r.contentPreview && <div className="hidden md:block w-40 text-[10px] italic opacity-70 line-clamp-4" dangerouslySetInnerHTML={{ __html: highlightAndSanitize(r.contentPreview, query) }} />}
               </div>
             </button>
           ))}

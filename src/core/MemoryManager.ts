@@ -5,7 +5,7 @@
  * un préchargement adaptatif et une gestion avancée du cycle de vie des objets.
  */
 
-export interface CacheEntry<T = any> {
+export interface CacheEntry<T = unknown> {
   key: string
   data: T
   timestamp: number
@@ -14,11 +14,12 @@ export interface CacheEntry<T = any> {
   size: number
   priority: CachePriority
   expiresAt?: number
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export type CachePriority = 'low' | 'normal' | 'high' | 'critical'
 import { globalEventBus } from './eventBus'
+import { logger } from '@/utils/logger'
 
 export interface CacheStats {
   totalEntries: number
@@ -48,7 +49,7 @@ export interface PreloadPattern {
   priority: number
   condition?: () => boolean
   prefetchCount: number
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface MemoryProfile {
@@ -89,8 +90,10 @@ export class MemoryManager extends EventTarget {
   }
 
   private cleanupTimer: number | null = null
+  private monitoringTimer: number | null = null
+  private visibilityHandler: (() => void) | null = null
   private isInitialized = false
-  private objectPool = new Map<string, any[]>()
+  private objectPool = new Map<string, unknown[]>()
 
   constructor(config?: Partial<MemoryConfig>) {
     super()
@@ -100,7 +103,7 @@ export class MemoryManager extends EventTarget {
     }
     
     this.initialize()
-  ;(globalThis as any).memoryManagerInstance = this
+  ;(globalThis as unknown as Record<string, unknown>).memoryManagerInstance = this
   }
 
   /**
@@ -109,7 +112,7 @@ export class MemoryManager extends EventTarget {
   private async initialize(): Promise<void> {
     if (this.isInitialized) return
 
-    console.log('🧠 Initialisation du Memory Manager...')
+    logger.info('MemoryManager', 'Initialisation')
 
     // Démarrer le nettoyage automatique
     this.startPeriodicCleanup()
@@ -127,7 +130,7 @@ export class MemoryManager extends EventTarget {
     this.startMemoryMonitoring()
 
     this.isInitialized = true
-    console.log('✅ Memory Manager initialisé')
+    logger.info('MemoryManager', 'Initialisé avec succès')
   }
 
   /**
@@ -172,7 +175,7 @@ export class MemoryManager extends EventTarget {
       }
       
     } catch (error) {
-      console.warn('Worker de compression non disponible:', error)
+      logger.warn('MemoryManager', 'Worker de compression non disponible', { error })
     }
   }
 
@@ -209,7 +212,7 @@ export class MemoryManager extends EventTarget {
    * Configure les gestionnaires de visibilité
    */
   private setupVisibilityHandlers(): void {
-    document.addEventListener('visibilitychange', () => {
+    this.visibilityHandler = () => {
       if (document.hidden) {
         // Page cachée, nettoyer agressivement
         this.performAggressiveCleanup()
@@ -217,14 +220,15 @@ export class MemoryManager extends EventTarget {
         // Page visible, relancer le preload
         this.resumePreloading()
       }
-    })
+    }
+    document.addEventListener('visibilitychange', this.visibilityHandler)
   }
 
   /**
    * Démarre le monitoring mémoire
    */
   private startMemoryMonitoring(): void {
-    setInterval(() => {
+    this.monitoringTimer = window.setInterval(() => {
       this.updateMemoryStats()
       this.adaptCacheSize()
       this.triggerGCIfNeeded()
@@ -241,7 +245,7 @@ export class MemoryManager extends EventTarget {
       priority?: CachePriority
       ttl?: number
       compress?: boolean
-      metadata?: Record<string, any>
+      metadata?: Record<string, unknown>
     } = {}
   ): Promise<boolean> {
     return new Promise(async (resolve) => {
@@ -281,7 +285,7 @@ export class MemoryManager extends EventTarget {
         resolve(true)
         
       } catch (error) {
-        console.error('Erreur lors de la mise en cache:', error)
+        logger.error('MemoryManager', 'Erreur mise en cache', { key, error })
         resolve(false)
       }
     })
@@ -317,12 +321,10 @@ export class MemoryManager extends EventTarget {
     // Enregistrer l'accès pour l'analyse
     this.recordAccess(key)
 
-    // Décompresser si nécessaire
-    if (entry.metadata?.compressed) {
-      return this.decompressData(entry.data) as T
-    }
-
-    return entry.data as T
+      // Décompresser si nécessaire
+      if (entry.metadata?.compressed) {
+        return this.decompressData(entry.data as { compressed: string }) as T
+      }    return entry.data as T
   }
 
   /**
@@ -376,7 +378,7 @@ export class MemoryManager extends EventTarget {
   public async preload(keys: string[]): Promise<void> {
     if (!this.config.preloadEnabled) return
 
-    console.log(`🔄 Préchargement de ${keys.length} éléments...`)
+    logger.info('MemoryManager', 'Préchargement', { count: keys.length })
 
     const preloadPromises = keys.map(async (key) => {
       if (this.has(key)) return // Déjà en cache
@@ -393,7 +395,7 @@ export class MemoryManager extends EventTarget {
           metadata: { preloaded: true, pattern: matchingPattern.id }
         })
       } catch (error) {
-        console.warn(`Erreur de préchargement pour ${key}:`, error)
+        logger.warn('MemoryManager', 'Erreur préchargement', { key, error })
       }
     })
 
@@ -421,7 +423,7 @@ export class MemoryManager extends EventTarget {
   /**
    * Charge des données (à implémenter selon l'usage)
    */
-  private async loadData(key: string): Promise<any> {
+  private async loadData(key: string): Promise<unknown> {
     // Simulation - sera remplacé par le vrai système de chargement
     return new Promise(resolve => {
       setTimeout(() => {
@@ -447,7 +449,7 @@ export class MemoryManager extends EventTarget {
   /**
    * Calcule la taille approximative d'un objet
    */
-  private calculateSize(data: any): number {
+  private calculateSize(data: unknown): number {
     try {
       const json = JSON.stringify(data)
       return new Blob([json]).size
@@ -472,7 +474,7 @@ export class MemoryManager extends EventTarget {
    * Libère de l'espace en évictant des entrées
    */
   private async makeSpace(requiredSize: number): Promise<void> {
-    console.log(`🧹 Libération d'espace: ${requiredSize} bytes requis`)
+    logger.debug('MemoryManager', 'Libération espace', { requiredSize })
 
     // Stratégie LRU avec priorité
     const entries = Array.from(this.cache.entries())
@@ -505,7 +507,7 @@ export class MemoryManager extends EventTarget {
     }
 
     this.updateStats()
-    console.log(`✅ ${freedSpace} bytes libérés (${removedCount} entrées supprimées)`)
+    logger.debug('MemoryManager', 'Espace libéré', { freedSpace, removedCount })
   }
 
   /**
@@ -547,7 +549,7 @@ export class MemoryManager extends EventTarget {
   /**
    * Décompresse des données
    */
-  private decompressData(compressedData: any): any {
+  private decompressData(compressedData: { compressed: string }): unknown {
     // Synchrone pour la simplicité, mais pourrait être async
     try {
       return JSON.parse(compressedData.compressed)
@@ -559,7 +561,7 @@ export class MemoryManager extends EventTarget {
   /**
    * Gère les résultats de compression
    */
-  private handleCompressionResult(_result: any): void {
+  private handleCompressionResult(_result: unknown): void {
     // Traité dans compressEntry pour l'instant
   }
 
@@ -594,7 +596,7 @@ export class MemoryManager extends EventTarget {
 
     if (expiredKeys.length > 0) {
       this.updateStats()
-      console.log(`🧹 Nettoyage: ${expiredKeys.length} entrées expirées supprimées`)
+      logger.debug('MemoryManager', 'Nettoyage périodique', { expiredKeys: expiredKeys.length })
     }
   }
 
@@ -602,7 +604,7 @@ export class MemoryManager extends EventTarget {
    * Effectue un nettoyage agressif
    */
   private performAggressiveCleanup(): void {
-    console.log('🧹 Nettoyage agressif en cours...')
+    logger.debug('MemoryManager', 'Nettoyage agressif démarré')
 
     let removedCount = 0
     const entries = Array.from(this.cache.entries())
@@ -617,7 +619,7 @@ export class MemoryManager extends EventTarget {
     }
 
     this.updateStats()
-    console.log(`✅ Nettoyage agressif: ${removedCount} entrées supprimées`)
+    logger.debug('MemoryManager', 'Nettoyage agressif terminé', { removedCount })
   }
 
   /**
@@ -626,7 +628,7 @@ export class MemoryManager extends EventTarget {
   private resumePreloading(): void {
     if (!this.config.preloadEnabled) return
     
-    console.log('🔄 Reprise du préchargement...')
+    logger.debug('MemoryManager', 'Reprise préchargement')
     
     // Analyser les patterns d'accès récents
     const recentAccesses = this.accessLog
@@ -713,8 +715,8 @@ export class MemoryManager extends EventTarget {
    */
   private updateMemoryStats(): void {
     if ('memory' in performance) {
-      const memory = (performance as any).memory
-      this.stats.memoryUsage = memory.usedJSHeapSize
+      const memory = (performance as unknown as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory
+      if (memory) this.stats.memoryUsage = memory.usedJSHeapSize
     }
   }
 
@@ -741,8 +743,8 @@ export class MemoryManager extends EventTarget {
    */
   private getMemoryPressure(): number {
     if ('memory' in performance) {
-      const memory = (performance as any).memory
-      return memory.usedJSHeapSize / memory.jsHeapSizeLimit
+      const memory = (performance as unknown as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory
+      if (memory) return memory.usedJSHeapSize / memory.jsHeapSizeLimit
     }
     return 0.5 // Valeur par défaut
   }
@@ -753,9 +755,9 @@ export class MemoryManager extends EventTarget {
   private triggerGCIfNeeded(): void {
     const pressure = this.getMemoryPressure()
     
-    if (pressure > 0.9 && 'gc' in window && typeof (window as any).gc === 'function') {
-      console.log('🗑️ Déclenchement du Garbage Collector')
-      ;(window as any).gc()
+    if (pressure > 0.9 && 'gc' in window && typeof (window as unknown as { gc?: () => void }).gc === 'function') {
+      logger.warn('Memory', 'Forçage GC manuel (pression critique)', { pressure })
+      ;(window as unknown as { gc: () => void }).gc()
     }
   }
 
@@ -784,7 +786,7 @@ export class MemoryManager extends EventTarget {
    * Retourne le profil mémoire
    */
   public getMemoryProfile(): MemoryProfile {
-    const memory = 'memory' in performance ? (performance as any).memory : null
+    const memory = 'memory' in performance ? (performance as unknown as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory : null
     
     return {
       used: memory?.usedJSHeapSize || 0,
@@ -801,7 +803,7 @@ export class MemoryManager extends EventTarget {
    */
   private calculateFragmentation(): number {
     // Estimation simple basée sur la différence entre alloué et utilisé
-    const memory = 'memory' in performance ? (performance as any).memory : null
+    const memory = 'memory' in performance ? (performance as unknown as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory : null
     if (!memory) return 0
 
     const fragmentation = (memory.totalJSHeapSize - memory.usedJSHeapSize) / memory.totalJSHeapSize
@@ -818,6 +820,18 @@ export class MemoryManager extends EventTarget {
       this.cleanupTimer = null
     }
 
+    // Arrêter le monitoring mémoire
+    if (this.monitoringTimer) {
+      clearInterval(this.monitoringTimer)
+      this.monitoringTimer = null
+    }
+
+    // Retirer l'event listener de visibilité
+    if (this.visibilityHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityHandler)
+      this.visibilityHandler = null
+    }
+
     // Terminer le worker de compression
     if (this.compressionWorker) {
       this.compressionWorker.terminate()
@@ -832,6 +846,6 @@ export class MemoryManager extends EventTarget {
     this.accessLog = []
     this.preloadPatterns.clear()
 
-    console.log('🧹 Memory Manager nettoyé')
+    logger.info('MemoryManager', 'Ressources nettoyées')
   }
 }

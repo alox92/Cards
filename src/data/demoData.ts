@@ -5,6 +5,7 @@
 import { DeckEntity } from '../domain/entities/Deck'
 import type { DeckService } from '@/application/services/DeckService'
 import type { CardService } from '@/application/services/CardService'
+import { logger } from '@/utils/logger'
 
 export const DEMO_DECKS = [
   { name: 'Vocabulaire Anglais - Niveau 1', description: 'Mots essentiels pour débuter en anglais', color: '#3B82F6', icon: '🇬🇧', tags: ['anglais', 'vocabulaire', 'débutant'], isPublic: false },
@@ -32,17 +33,17 @@ export const DEMO_CARDS = [
 // Initialisation via services (unique variante après suppression legacy stores)
 export const initializeDemoDataServices = async (deckService: DeckService, cardService: CardService) => {
   try {
-    console.log('🎯 Initialisation des données de démonstration (services)...')
+    logger.info('DemoData', '🎯 Initialisation des données de démonstration (services)...')
     const existing = await deckService.listDecks()
     if (existing.length > 0) {
-      console.log('📚 Données existantes détectées (services), skip demo init')
+      logger.info('DemoData', '📚 Données existantes détectées (services), skip demo init')
       return
     }
     const createdDecks: DeckEntity[] = []
     for (const deckData of DEMO_DECKS) {
       const deck = await deckService.createDeck(deckData as any)
       createdDecks.push(deck)
-      console.log(`📚 Deck créé: ${deck.name}`)
+      logger.info('DemoData', `📚 Deck créé: ${deck.name}`, { deckId: deck.id })
     }
     let cardIndex = 0
     for (let deckIndex = 0; deckIndex < createdDecks.length; deckIndex++) {
@@ -61,10 +62,10 @@ export const initializeDemoDataServices = async (deckService: DeckService, cardS
           cardIndex++
         }
       }
-      console.log(`🃏 ${cardsPerDeck} cartes créées pour ${deck.name}`)
+      logger.info('DemoData', `🃏 ${cardsPerDeck} cartes créées pour ${deck.name}`, { deckId: deck.id, cardsCount: cardsPerDeck })
     }
-    console.log('✅ Données de démonstration (services) initialisées')
+    logger.info('DemoData', '✅ Données de démonstration (services) initialisées')
   } catch (e) {
-    console.error('❌ Erreur init demo (services):', e)
+    logger.error('DemoData', '❌ Erreur init demo (services)', { error: e })
   }
 }

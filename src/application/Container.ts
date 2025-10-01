@@ -21,6 +21,7 @@ import { SearchIndexService } from './services/SearchIndexService'
 import { LearningForecastService } from './services/LearningForecastService'
 import { InsightService } from './services/InsightService'
 import { AdaptiveOrchestratorService } from './services/AdaptiveOrchestratorService'
+import { PerformanceOptimizer } from '@/core/PerformanceOptimizer'
 
 class Container {
 	private instances = new Map<string, any>()
@@ -88,4 +89,5 @@ function registerAll(){
 	container.register('SearchIndexService', () => new SearchIndexService(
 		container.resolve(CARD_REPOSITORY_TOKEN)
 	))
+	container.register('PerformanceOptimizer', () => new PerformanceOptimizer())
 }

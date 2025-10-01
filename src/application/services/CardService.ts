@@ -1,46 +1,62 @@
 import type { CardRepository } from '../../domain/repositories/CardRepository'
 import { CardEntity, type CardCreationData } from '../../domain/entities/Card'
-import { ValidationError, ServiceError } from '@/utils/errors'
 import { logger } from '@/utils/logger'
+
+// Helper local pour créer des erreurs typées avec un code + message lisible attendu par les tests
+function svcError(code: string, message: string) {
+  const e: any = new Error(message)
+  e.code = code
+  return e
+}
 
 export class CardService {
   private repo: CardRepository
   constructor(repo: CardRepository) { this.repo = repo }
   async create(deckId: string, data: CardCreationData): Promise<CardEntity> {
-    if(!deckId) throw new ValidationError('deckId requis pour créer une carte','CARD_CREATE_MISSING_DECK')
-    if(!data.frontText || !data.backText) throw new ValidationError('frontText et backText requis','CARD_CREATE_VALIDATION')
+    if(!deckId) throw svcError('CARD_CREATE_MISSING_DECK','deckId requis')
+    if(!data.frontText || !data.backText) throw svcError('CARD_CREATE_VALIDATION','frontText/backText requis')
     try {
       const entity = new CardEntity({ ...data, deckId })
       return await this.repo.create(entity)
     } catch(e){
       logger.error('CardService','Echec création carte',{error:e})
-      throw new ServiceError('Erreur création carte','CARD_CREATE_FAILED',{ cause: e })
+      throw svcError('CARD_CREATE_FAILED','échec création carte')
     }
   }
-  async update(card: CardEntity): Promise<void> { 
-    if(!card.id) throw new ValidationError('ID carte manquant','CARD_UPDATE_NO_ID')
+  async update(card: CardEntity): Promise<void> {
+    if(!card.id) throw svcError('CARD_UPDATE_NO_ID','ID carte requis')
     try { await this.repo.update(card) } catch(e){
       logger.error('CardService','Echec maj carte',{error:e, id: card.id})
-      throw new ServiceError('Erreur mise à jour carte','CARD_UPDATE_FAILED',{ cause: e, id: card.id })
+      throw svcError('CARD_UPDATE_FAILED','échec mise à jour carte')
     }
   }
   async delete(id: string): Promise<void> { 
-    if(!id) throw new ValidationError('ID requis','CARD_DELETE_NO_ID')
+    if(!id) throw svcError('CARD_DELETE_NO_ID','ID requis')
     try { await this.repo.delete(id) } catch(e){
       logger.error('CardService','Echec suppression carte',{error:e,id})
-      throw new ServiceError('Erreur suppression carte','CARD_DELETE_FAILED',{ cause: e, id })
+      throw svcError('CARD_DELETE_FAILED','échec suppression carte')
     }
   }
   async get(id: string): Promise<CardEntity | null> { 
-    if(!id) throw new ValidationError('ID requis','CARD_GET_NO_ID')
-  const c = await this.repo.getById(id)
-  return c || null
+    if(!id) throw svcError('CARD_GET_NO_ID','ID requis')
+    try { return await this.repo.getById(id) || null } catch(e){
+      logger.error('CardService','Echec get carte',{error:e,id})
+      throw svcError('CARD_GET_FAILED','échec récupération carte')
+    }
   }
   async listByDeck(deckId: string): Promise<CardEntity[]> { 
-    if(!deckId) throw new ValidationError('deckId requis','CARD_LIST_NO_DECK')
-    return this.repo.getByDeck(deckId) 
+    if(!deckId) throw svcError('CARD_LIST_NO_DECK','deckId requis')
+    try { return await this.repo.getByDeck(deckId) } catch(e){
+      logger.error('CardService','Echec listByDeck',{error:e,deckId})
+      throw svcError('CARD_LIST_FAILED','échec listByDeck')
+    }
   }
-  async listAll(): Promise<CardEntity[]> { return this.repo.getAll() }
+  async listAll(): Promise<CardEntity[]> { 
+    try { return await this.repo.getAll() } catch(e){
+      logger.error('CardService','Echec listAll',{error:e})
+      throw svcError('CARD_LIST_ALL_FAILED','échec listAll')
+    }
+  }
   async countAll(): Promise<number> {
     // Si le repo propose une méthode optimisée count, l'utiliser
     const anyRepo: any = this.repo as any

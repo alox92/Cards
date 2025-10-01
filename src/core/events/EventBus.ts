@@ -1,4 +1,6 @@
 // Simple typed EventBus (pub/sub) pour orchestrer mises à jour UI et invalidations caches.
+import { logger } from '@/utils/logger'
+
 export interface BaseEvent<T extends string = string, P = any> { type: T; payload: P; timestamp: number }
 
 export type EventHandler<E extends BaseEvent = BaseEvent> = (event: E) => void
@@ -36,7 +38,7 @@ class EventBus {
     const set = this.handlers.get(ev.type)
     if(!set) return
     for(const h of Array.from(set)){
-      try { h(ev) } catch(e){ /* eslint-disable no-console */ console.error('Event handler error', e) }
+      try { h(ev) } catch(e){ logger.error('EventBus', 'Event handler error', { error: e }) }
     }
   }
 

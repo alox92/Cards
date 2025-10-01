@@ -19,8 +19,8 @@ export class AdaptiveOrchestratorService {
   private lastAdjust = 0
   private adjustInterval = 60_000 // 1 min simple heuristique (dev)
   constructor(
-    private readonly forecastSvc: LearningForecastService,
-    private readonly insightSvc: InsightService
+    private readonly forecastSvc?: LearningForecastService,
+    private readonly insightSvc?: InsightService
   ){}
 
   getWeights(){ return { ...this.weights } }
@@ -29,8 +29,8 @@ export class AdaptiveOrchestratorService {
     // Préparer un snapshot forecast + insights pour éviter premier appel froid
     try {
       await Promise.allSettled([
-        this.forecastSvc.getForecast?.(),
-        Promise.resolve(this.insightSvc.getCached() || this.insightSvc.generate?.(false))
+        this.forecastSvc?.getForecast?.(),
+        Promise.resolve(this.insightSvc?.getCached?.() || this.insightSvc?.generate?.(false))
       ])
     } catch {/* ignore */}
     return { ready: true, weights: { ...this.weights } }
@@ -38,8 +38,8 @@ export class AdaptiveOrchestratorService {
 
   computeQueue(cards: CardEntity[], deckId: string): CardEntity[]{
     const base = adaptiveStudyScorer.scoreCards(cards, { now: Date.now(), targetDeck: deckId, recencyWeight: 1, difficultyWeight:1, retentionWeight:1 })
-  const forecast = this.forecastSvc.getForecast?.()
-  const insightSnapshot = this.insightSvc.getCached()
+  const forecast = this.forecastSvc?.getForecast?.()
+  const insightSnapshot = this.insightSvc?.getCached?.()
     const leechSet = new Set<string>((insightSnapshot?.insights||[]).filter(i=> i.type==='leech').map(i=> i.meta?.cardId))
     // For forecast risk we may not have snapshot yet -> treat as 0
     const forecastMap: Record<string, number> = {}

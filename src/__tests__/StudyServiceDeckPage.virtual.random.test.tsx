@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 
-// Dataset important pour virtualisation
-const CARDS = Array.from({ length: 1500 }, (_, i) => ({
+const FAST = process.env.FAST_TESTS === '1'
+// Dataset important pour virtualisation (réduit si FAST)
+const SIZE = FAST ? 700 : 1500
+const CARDS = Array.from({ length: SIZE }, (_, i) => ({
   id: 'r'+i,
   frontText: 'Front '+i,
   backText: 'Back '+i,
@@ -60,8 +62,9 @@ describe('Virtualisation random stress + sélection après suppression', () => {
     const select = screen.getByRole('combobox') as HTMLSelectElement
     fireEvent.change(select, { target: { value: 'virtual' } })
 
-    const rng = mulberry32(123456)
-    for(let i=0;i<25;i++){
+  const rng = mulberry32(123456)
+  const LOOPS = FAST ? 12 : 25
+  for(let i=0;i<LOOPS;i++){
       const ratio = rng()
       const target = Math.floor(ratio * (list.scrollHeight - list.clientHeight))
       scrollTo(list, target)

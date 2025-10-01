@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, 'release/**', 'feature/**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install deps
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Tests rapides + couverture
+        run: npm run test:fast:coverage
+      - name: Génération badge couverture
+        run: node scripts/generateCoverageBadge.cjs || echo 'skip badge'
+      - name: Build
+        run: npm run build
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+  e2e:
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install deps
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+      - name: Build (prod preview pour tests)
+        run: npm run build
+      - name: Start server
+        run: npx serve dist -l 3000 &
+      - name: Wait for server
+        run: npx wait-on http://localhost:3000
+      - name: E2E tests
+        run: npm run test:e2e
+        env:
+          E2E_BASE_URL: http://localhost:3000

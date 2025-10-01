@@ -9,6 +9,7 @@ import { CardEntity } from '@/domain/entities/Card'
 import { DeckEntity } from '@/domain/entities/Deck'
 import { MEDIA_REPOSITORY_TOKEN, DexieMediaRepository } from '@/infrastructure/persistence/dexie/DexieMediaRepository'
 import { SEARCH_INDEX_SERVICE_TOKEN } from '@/application/services/SearchIndexService'
+import { sanitizeRich } from '@/utils/sanitize'
 // heavy libs loaded on demand to reduce main bundle size
 let _JSZip: any
 async function getJSZip(){ if(!_JSZip){ _JSZip = (await import('jszip')).default } return _JSZip }
@@ -26,6 +27,7 @@ function detectFormat(file: File): string {
   if(name.endsWith('.apkg')) return 'apkg'
   if(name.endsWith('.xls') || name.endsWith('.xlsx')) return 'xlsx'
   if(name.endsWith('.pdf')) return 'pdf'
+  if(name.endsWith('.docx')) return 'docx'
   if(name.endsWith('.zip')) return 'zip'
   return 'auto'
 }
@@ -100,7 +102,7 @@ async function parsePDF(file: File, opts?: { perHeading?: boolean }): Promise<Ar
       let imageBlob: Blob | undefined
       try {
         const viewport = page.getViewport({ scale: 1 })
-        const canvas = (typeof document!=='undefined'? document.createElement('canvas'): undefined) as HTMLCanvasElement | undefined
+        const canvas = (typeof document !== 'undefined' ? document.createElement('canvas') : undefined)
         if(canvas){
           canvas.width = viewport.width
           canvas.height = viewport.height
@@ -184,6 +186,82 @@ async function parseXLSX(file: File, columnMap?: { front?: string; back?: string
   } catch { return [] }
 }
 
+async function parseDocx(file: File): Promise<Array<{ front: string; back: string }>> {
+  // Heuristiques: 
+  // - Si des tableaux 2+ colonnes existent: chaque ligne -> une carte (col0=front, col1..n=back)
+  // - Sinon, segmenter par titres h1/h2/h3: front=titre, back=contenu jusqu'au prochain titre
+  // - Fallback: paires de paragraphes
+  try {
+    // mammoth côté navigateur
+  const mammoth: any = await import('mammoth')
+    const arrayBuffer = await file.arrayBuffer()
+    const result = await mammoth.convertToHtml({ arrayBuffer }, {
+      styleMap: [
+        "p[style-name='Title'] => h1:fresh",
+        "p[style-name='Heading 1'] => h2:fresh",
+        "p[style-name='Heading 2'] => h3:fresh",
+        'u => u', 'b => strong', 'i => em', 'strike => s'
+      ],
+      convertImage: mammoth.images.inline(async (element: any) => {
+        const arrayBuffer = await element.read('arrayBuffer')
+        const type = element.contentType || 'image/png'
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+        return { src: `data:${type};base64,${base64}` }
+      })
+    })
+    const html: string = result.value || ''
+    // Parser HTML pour extraire tables / sections
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, 'text/html')
+
+    // 1) Tables -> cartes
+    const cards: Array<{ front: string; back: string }> = []
+    const tables = Array.from(doc.querySelectorAll('table'))
+    for(const table of tables){
+      const rows = Array.from(table.querySelectorAll('tr'))
+      for(const tr of rows){
+        const cells = Array.from(tr.querySelectorAll<HTMLTableCellElement | HTMLTableHeaderCellElement>('td,th'))
+        if(cells.length >= 2){
+          const front = cells[0].innerHTML.trim()
+          const back = cells.slice(1).map(c=> c.innerHTML.trim()).join('<br/>')
+          if(front || back){ cards.push({ front, back }) }
+        }
+      }
+    }
+    if(cards.length){ return cards }
+
+    // 2) Segmentation par titres
+    const headings = Array.from(doc.querySelectorAll<HTMLElement>('h1, h2, h3'))
+    if(headings.length){
+      for(let i=0;i<headings.length;i++){
+        const h = headings[i]
+        const next = headings[i+1] || null
+        const section: HTMLElement[] = []
+        let el: Node | null = h.nextSibling
+        while(el && el !== next){
+          if(el instanceof HTMLElement){ section.push(el) }
+          el = el.nextSibling
+        }
+        const front = h.innerHTML.trim()
+  const back = section.map(e=> e.outerHTML).join('')
+        if(front || back){ cards.push({ front, back }) }
+      }
+      if(cards.length){ return cards }
+    }
+
+    // 3) Fallback sur paragraphes
+    const paras = Array.from(doc.querySelectorAll<HTMLParagraphElement>('p')).map(p=> p.innerHTML.trim()).filter(Boolean)
+    for(let i=0;i<paras.length;i+=2){
+      const front = paras[i] || ''
+      const back = paras[i+1] || ''
+      if(front || back){ cards.push({ front, back }) }
+    }
+    return cards
+  } catch {
+    return []
+  }
+}
+
 async function parseApkg(file: File): Promise<Array<{ front: string; back: string; tags?: string[]; mediaAssets?: Record<string, Blob> }>> {
   try {
   const JSZip = await getJSZip()
@@ -196,7 +274,7 @@ async function parseApkg(file: File): Promise<Array<{ front: string; back: strin
     const db = new SQL.Database(buf)
     // models metadata (fields + templates for better front/back detection)
     interface ModelMeta { fields: string[]; frontIdx?: number; backIdx?: number }
-    let modelFields: Record<string, ModelMeta> = {}
+  const modelFields: Record<string, ModelMeta> = {}
     try {
       const colRes = db.exec('SELECT models FROM col LIMIT 1')
       if(colRes.length){
@@ -324,13 +402,31 @@ async function parseZip(file: File): Promise<{ entries: any[]; media: Record<str
 
 // Basic emoji & formatting normalization
 function normalizeRichText(input: string): string {
-  // Conserver emoji (UTF-16) - juste trimming et conversion <br> -> \n
-  return input.replace(/<br\s*\/>/gi,'\n').replace(/<[^>]+>/g,'').trim()
+  // Préserver le HTML riche (sécurisé) quand présent, sinon conserver le texte brut.
+  const s = (input || '').trim()
+  if(!s) return ''
+  const looksHtml = /<\w|<\/|<br\s*\/?\s*>|&(?:[a-z]+|#\d+);/i.test(s)
+  if(looksHtml){
+    return sanitizeRich(s)
+  }
+  return s
 }
 
 interface ImportOptions { deckName?: string; targetDeckId?: string; columnMap?: { front?: string; back?: string; tags?: string }; pdfPerHeading?: boolean; useWorker?: boolean; xlsxSheetName?: string; onProgress?: (info: { phase: string; progress: number }) => void }
 
 export async function importDeckMultiFormat(file: File, opts: ImportOptions = {}): Promise<ImportResult> {
+  const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+  const ALLOWED_MIME = new Set([
+    'text/plain','text/csv','application/json','application/pdf','application/zip','application/x-zip-compressed',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/msword'
+  ])
+  if(file.size > MAX_SIZE){
+    return { deck: new DeckEntity({ name: opts.deckName || 'Import rejeté' }), cards: [], media: 0, warnings: ['Fichier trop volumineux (>10MB)'] }
+  }
+  if(file.type && !ALLOWED_MIME.has(file.type) && !/\.(apkg|zip|csv|json|txt|pdf|xlsx?)$/i.test(file.name)){
+    return { deck: new DeckEntity({ name: opts.deckName || 'Import rejeté' }), cards: [], media: 0, warnings: ['Type MIME non autorisé'] }
+  }
   const format = detectFormat(file)
   const textFormats = ['csv','txt','json']
   const binary = ['apkg','xlsx','pdf','zip']
@@ -344,7 +440,7 @@ export async function importDeckMultiFormat(file: File, opts: ImportOptions = {}
   if(!deck){ deck = new DeckEntity({ name: opts.deckName || file.name.replace(/\.[^.]+$/,'') }) ; await deckRepo.create(deck) }
 
   let parsed: any[] = []
-  let extraMedia: Record<string, Blob> = {}
+  const extraMedia: Record<string, Blob> = {}
   if(textFormats.includes(format)){
     const content = await file.text()
     if(format==='csv') parsed = await parseCSV(content, opts.columnMap)
@@ -404,6 +500,7 @@ export async function importDeckMultiFormat(file: File, opts: ImportOptions = {}
         parsed = await parseApkg(file)
       }
     }
+    else if(format==='docx'){ parsed = await parseDocx(file) }
     else if(format==='zip') { const z = await parseZip(file); parsed = z.entries; Object.assign(extraMedia, z.media); warnings.push(...z.warnings) }
     if(parsed.length===0) warnings.push('Support partiel ou échec parsing ' + format)
   } else {

@@ -15,11 +15,13 @@ function trigrams(term: string): string[]{
 
 export class SearchIndexService {
   constructor(private readonly cardRepo: any){ }
+  private _deckCardMap: Map<string, string[]> | null = null
+  private _bloomMap: Map<string, Uint32Array> | null = null
 
   // PROMESSE DE REBUILD EN COURS (empêche plusieurs lancements simultanés)
   private _rebuildingPromise: Promise<any> | null = null
 
-  async rebuildAll(){
+  async rebuildAll(signal?: AbortSignal){
     if (this._rebuildingPromise) {
       return this._rebuildingPromise
     }
@@ -28,7 +30,8 @@ export class SearchIndexService {
         // --- code original déplacé ici ---
         await aribaDB.table('searchIndex').clear()
         try { await (aribaDB as any).searchTrigrams.clear() } catch {/* may not exist on older schema */}
-        const cards = await this.cardRepo.getAll()
+  if(signal?.aborted) return { aborted: true }
+  const cards = await this.cardRepo.getAll()
         const THRESHOLD = 1500
         if (cards.length >= THRESHOLD && typeof navigator !== 'undefined' && (navigator as any).hardwareConcurrency) {
           try {
@@ -74,6 +77,7 @@ export class SearchIndexService {
         const seen = new Set<string>()
         const CHUNK = 120
         for(let i=0;i<cards.length;i+=CHUNK){
+          if(signal?.aborted) return { aborted: true }
           const slice = cards.slice(i, i+CHUNK)
             for(const c of slice){
               const terms = [...tokenize(c.frontText || ''), ...tokenize(c.backText || '')]
@@ -97,6 +101,12 @@ export class SearchIndexService {
     })()
     return this._rebuildingPromise
   }
+  rebuildAllAbortable(){
+    const controller = new AbortController()
+    const p = this.rebuildAll(controller.signal)
+    ;(p as any).abort = () => controller.abort()
+    return p as Promise<any> & { abort: ()=>void }
+  }
   async indexCard(card: any){
     const terms = [...tokenize(card.frontText), ...tokenize(card.backText)]
     // delete old terms
@@ -113,8 +123,19 @@ export class SearchIndexService {
       }
     }
     if(trigramRows.length){ try { await (aribaDB as any).searchTrigrams.bulkAdd(trigramRows) } catch {/* ignore */} }
+    // Mise à jour incrémentale map deck
+    try {
+      if(this._deckCardMap){
+        const arr = this._deckCardMap.get(card.deckId) || []
+        if(!arr.includes(card.id)){ arr.push(card.id); this._deckCardMap.set(card.deckId, arr) }
+      }
+      if(this._bloomMap){
+        this._bloomMap.set(card.id, buildBloom(terms))
+      }
+    } catch {}
   }
   async search(query: string, opts: { ranking?: 'none' | 'tfidf' | 'fuzzy' } = { ranking: 'tfidf' }){
+    const t0 = performance.now()
     const qTerms = tokenize(query)
     if(!qTerms.length) return []
     // stats tracking
@@ -195,7 +216,9 @@ export class SearchIndexService {
       }
       scores[cid] = score
     }
-    return candidate.sort((a,b)=> (scores[b]||0) - (scores[a]||0))
+  const out = candidate.sort((a,b)=> (scores[b]||0) - (scores[a]||0))
+  recordSearchDuration(performance.now() - t0)
+  return out
   }
 }
 export const SEARCH_INDEX_SERVICE_TOKEN = 'SearchIndexService'
@@ -221,8 +244,58 @@ export const SEARCH_INDEX_SERVICE_TOKEN = 'SearchIndexService'
       }
     }
     if(bulk.length){ await (aribaDB as any).searchIndex.bulkAdd(bulk).catch(()=>{}) }
-    if(trigramRows.length){ await (aribaDB as any).searchTrigrams.bulkAdd(trigramRows).catch(()=>{}) }
-    ;(this as any)._primed = true
+  if(trigramRows.length){ await (aribaDB as any).searchTrigrams.bulkAdd(trigramRows).catch(()=>{}) }
+  this._primed = true
+    // Pré-index deck->cards pour accélérer filtrage decks
+    if(!this._deckCardMap){
+      this._deckCardMap = new Map()
+      for(const c of slice){
+        const list = this._deckCardMap.get(c.deckId) || []
+        list.push(c.id)
+        this._deckCardMap.set(c.deckId, list)
+      }
+    }
   } catch {}
 }
-;(SearchIndexService as any).prototype.isPrimed = function(){ return !!(this as any)._primed }
+;(SearchIndexService as any).prototype.isPrimed = function(){ return !!this._primed }
+;(SearchIndexService as any).prototype.getDeckCardIds = function(deckId: string){
+  if(!this._deckCardMap){ return null }
+  return this._deckCardMap.get(deckId) || []
+}
+// -- Bloom filter util minimal (32*32 = 1024 bits)
+function buildBloom(terms: string[]): Uint32Array {
+  const bits = new Uint32Array(32)
+  for(const t of terms){
+    const h1 = hashStr(t)
+    const h2 = hashStr(t+'x')
+    setBit(bits, h1 % 1024)
+    setBit(bits, h2 % 1024)
+  }
+  return bits
+}
+function setBit(arr: Uint32Array, idx: number){ arr[idx>>>5] |= (1 << (idx & 31)) }
+function hasBit(arr: Uint32Array, idx: number){ return (arr[idx>>>5] & (1 << (idx & 31))) !== 0 }
+function hashStr(s: string){ let h=0; for(let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i))|0 } return h>>>0 }
+;(SearchIndexService as any).prototype.maybeContainsTerm = function(cardId: string, term: string){
+  if(!this._bloomMap) return true
+  const bloom = this._bloomMap.get(cardId); if(!bloom) return true
+  const h1 = hashStr(term) % 1024
+  const h2 = hashStr(term+'x') % 1024
+  return hasBit(bloom, h1) && hasBit(bloom, h2)
+}
+
+// --- Search duration instrumentation (window globals) ---
+function recordSearchDuration(ms: number){
+  try {
+    const w:any = window as any
+    const arr = (w.__SEARCH_DURS__ ||= [])
+    arr.push(ms)
+    if(arr.length > 200) arr.splice(0, arr.length-200)
+    // Build stats
+    const sorted = [...arr].sort((a,b)=> a-b)
+    const p = (q:number)=> sorted[Math.min(sorted.length-1, Math.floor(sorted.length*q))]
+    const hist: Record<number, number> = {}
+    for(const v of arr){ const b = Math.pow(2, Math.floor(Math.log2(Math.max(1, v)))); hist[b] = (hist[b]||0)+1 }
+    w.__SEARCH_DURS_STATS__ = { count: arr.length, p50: p(0.5), p95: p(0.95), p99: p(0.99), hist }
+  } catch {/* ignore */}
+}

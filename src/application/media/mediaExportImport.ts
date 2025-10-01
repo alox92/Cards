@@ -2,6 +2,7 @@ import { container } from '@/application/Container'
 import { MEDIA_REPOSITORY_TOKEN, DexieMediaRepository } from '@/infrastructure/persistence/dexie/DexieMediaRepository'
 import { CARD_REPOSITORY_TOKEN } from '@/domain/repositories/CardRepository'
 import type { CardRepository } from '@/domain/repositories/CardRepository'
+import { logger } from '@/utils/logger'
 // Lazy-load JSZip to keep it out of the main bundle
 let _JSZip: any
 async function getJSZip(){ if(!_JSZip){ _JSZip = (await import('jszip')).default } return _JSZip }
@@ -94,7 +95,7 @@ export async function importMediaZip(blob: Blob){
       const ab = await file.async('arraybuffer')
       const b = new Blob([ab], { type: entry.mime })
       const sum = await sha256(ab)
-      if(sum === entry.checksum){ blobs[entry.id] = b } else { console.warn('[media import] checksum mismatch', entry.id) }
+      if(sum === entry.checksum){ blobs[entry.id] = b } else { logger.warn('MediaImport', '[media import] checksum mismatch', { entryId: entry.id }) }
     }
   }
   return await importMediaArchive({ manifest, cards, blobs })

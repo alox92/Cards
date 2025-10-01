@@ -3,12 +3,16 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { container } from '@/application/Container'
 import { CARD_SERVICE_TOKEN, CardService } from '@/application/services/CardService'
 import { eventBus } from '@/core/events/EventBus'
+import { isFeatureEnabled } from '@/config/featureFlags'
+import { UltraRichTextEditor } from '@/ui/components/Editor/UltraRichTextEditor'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 interface CardCreateDrawerProps { deckId: string | null; open: boolean; onClose: () => void }
 
 export const CardCreateDrawer = ({ deckId, open, onClose }: CardCreateDrawerProps) => {
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
+  const useRTE = isFeatureEnabled('richTextEditor')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string|null>(null)
   const cardService = container.resolve<CardService>(CARD_SERVICE_TOKEN)
@@ -17,7 +21,9 @@ export const CardCreateDrawer = ({ deckId, open, onClose }: CardCreateDrawerProp
     if(!deckId) return
     setLoading(true); setError(null)
     try {
-      const card = await cardService.create(deckId, { frontText: front.trim(), backText: back.trim() })
+      const payloadFront = useRTE ? sanitizeHtml(front) : front.trim()
+      const payloadBack = useRTE ? sanitizeHtml(back) : back.trim()
+      const card = await cardService.create(deckId, { frontText: payloadFront, backText: payloadBack })
       eventBus.publish({ type:'card.created', payload:{ cardId: card.id, deckId } })
       setFront(''); setBack('')
       onClose()
@@ -36,13 +42,22 @@ export const CardCreateDrawer = ({ deckId, open, onClose }: CardCreateDrawerProp
               <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-sm">✕</button>
             </div>
             <div className="flex flex-col gap-3 overflow-y-auto">
-              <textarea value={front} onChange={e=>setFront(e.target.value)} placeholder="Question / Recto" className="w-full text-sm p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 resize-none h-24" />
-              <textarea value={back} onChange={e=>setBack(e.target.value)} placeholder="Réponse / Verso" className="w-full text-sm p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 resize-none h-32" />
+              {useRTE ? (
+                <>
+                  <UltraRichTextEditor value={front} onChange={setFront} placeholder="Question / Recto (rich text)" height="180px" />
+                  <UltraRichTextEditor value={back} onChange={setBack} placeholder="Réponse / Verso (rich text)" height="220px" />
+                </>
+              ) : (
+                <>
+                  <textarea value={front} onChange={e=>setFront(e.target.value)} placeholder="Question / Recto" className="w-full text-sm p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 resize-none h-24" />
+                  <textarea value={back} onChange={e=>setBack(e.target.value)} placeholder="Réponse / Verso" className="w-full text-sm p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 resize-none h-32" />
+                </>
+              )}
               {error && <div className="text-xs text-red-500">{error}</div>}
             </div>
             <div className="mt-auto flex gap-2">
               <button onClick={onClose} className="flex-1 px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs hover:bg-gray-300 dark:hover:bg-gray-600">Annuler</button>
-              <button disabled={!front.trim() || !back.trim() || !deckId || loading} onClick={submit} className="flex-1 px-3 py-2 rounded bg-blue-600 text-white text-xs disabled:opacity-40 hover:bg-blue-500">{loading? 'Création…':'Créer'}</button>
+              <button disabled={!(useRTE ? (front && back) : (front.trim() && back.trim())) || !deckId || loading} onClick={submit} className="flex-1 px-3 py-2 rounded bg-blue-600 text-white text-xs disabled:opacity-40 hover:bg-blue-500">{loading? 'Création…':'Créer'}</button>
             </div>
           </motion.div>
         </motion.div>

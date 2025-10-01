@@ -7,11 +7,30 @@
   <meta name="description" content="Application de cartes flash ultra-performante (Web PWA)" />
   <meta name="keywords" content="flashcards, apprentissage, répétition espacée, mémorisation, pwa" />
     <meta name="author" content="Alox92" />
+  <!-- Preconnect / DNS hints -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Module preload critical entry (explicit for legacy browsers fallback) -->
+  <!-- Purge SW & caches en dev pour éviter manifest/JS obsolètes -->
+  <script>
+    (function(){
+      const isLocal = location.hostname === '127.0.0.1' || location.hostname === 'localhost'
+      if('serviceWorker' in navigator && isLocal){
+        navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()))
+      }
+      if('caches' in window && isLocal){
+        caches.keys().then(keys=> keys.forEach(k=> caches.delete(k)))
+      }
+    })()
+  </script>
+  <link rel="modulepreload" href="/src/main.tsx" />
+  <!-- Précharge un shim process pour éviter ReferenceError si une lib y accède -->
+  <script type="module" src="/src/shims/processShim.ts"></script>
     
-    <!-- PWA Meta Tags -->
+  <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#3b82f6" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/pwa-192.png" />
+  <link rel="manifest" href="/manifest.json?v=dev3" />
     
     <title>Cards</title>
     
@@ -26,7 +45,10 @@
       body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         overflow-x: hidden;
+        contain: layout paint style;
+        text-rendering: optimizeLegibility;
       }
+      body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::after { animation: none !important; transition: none !important; }
       
       /* Loading spinner ultra-smooth */
       .loading-spinner {
@@ -59,6 +81,8 @@
     <script>
       console.log('🔧 HTML chargé, début du diagnostic...')
       document.getElementById('debug-status').innerHTML = 'HTML chargé ✅'
+  // Reduced motion preference
+  try { if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){ document.body.classList.add('reduced-motion') } } catch {}
       
       // Test si React se charge
       setTimeout(() => {
@@ -68,6 +92,7 @@
         }
       }, 3000)
     </script>
+  
   <!-- Point d'entrée application complète -->
   <script type="module" src="/src/main.tsx"></script>
   </body>

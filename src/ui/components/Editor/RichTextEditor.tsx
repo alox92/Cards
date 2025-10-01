@@ -4,6 +4,8 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { getFluidTransitionMastery, FluidTransitionMastery } from '../../../core/FluidTransitionMastery'
+import { sanitizeRich } from '@/utils/sanitize'
+import { logger } from '@/utils/logger'
 
 interface RichTextEditorProps {
   value: string
@@ -169,7 +171,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         const url = await onImageUpload(file)
         insertHTML(`<img src="${url}" alt="Image" style="max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0;" />`)
       } catch (error) {
-        console.error('Erreur upload image:', error)
+        logger.error('RichTextEditor', 'Erreur upload image', { error })
       }
     } else {
       // Utiliser URL local
@@ -185,7 +187,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         const url = await onAudioUpload(file)
         insertHTML(`<audio controls style="width: 100%; margin: 10px 0;"><source src="${url}" type="${file.type}">Votre navigateur ne supporte pas l'audio.</audio>`)
       } catch (error) {
-        console.error('Erreur upload audio:', error)
+        logger.error('RichTextEditor', 'Erreur upload audio', { error })
       }
     } else {
       const url = URL.createObjectURL(file)
@@ -203,7 +205,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           <a href="${url}" target="_blank" style="color: #3b82f6; text-decoration: underline;">Ouvrir le PDF</a>
         </div>`)
       } catch (error) {
-        console.error('Erreur upload PDF:', error)
+        logger.error('RichTextEditor', 'Erreur upload PDF', { error })
       }
     } else {
       const url = URL.createObjectURL(file)
@@ -769,9 +771,20 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       <div
         ref={editorRef}
         className="ultra-editor-content"
-        contentEditable
+  contentEditable
         dangerouslySetInnerHTML={{ __html: content }}
-        onInput={handleInput}
+  onInput={(e)=> {
+    handleInput(e)
+    try {
+      const el = e.currentTarget as HTMLElement
+      const clean = sanitizeRich(el.innerHTML)
+      if (clean !== el.innerHTML) {
+        el.innerHTML = clean
+      }
+    } catch {
+      /* ignore sanitization errors */
+    }
+  }}
         onKeyDown={handleKeyDown}
         data-placeholder={placeholder}
         suppressContentEditableWarning

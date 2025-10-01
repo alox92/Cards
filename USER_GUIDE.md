@@ -32,6 +32,32 @@ L'application démarre avec tous les systèmes d'optimisation activés automatiq
 | Zoom UI Global | Mise à l’échelle fine (0.85–1.25) | Réglages > UI avancée |
 | Réduction Motion | Force un mode minimal animations | Réglages > UI avancée |
 
+## 🧭 Cockpit Command Center (Barre supérieure)
+
+### Indicateurs instantanés
+- **À réviser aujourd’hui** : compteur mis à jour en arrière-plan via `useGlobalStats` (rafraîchissement auto toutes les 30 s)
+- **Revues du jour** : compare cartes révisées vs nouvelles cartes pour signaler la charge actuelle
+- **Rétention globale** : couleur dynamique (vert ≥ 90 %, bleu ≥ 75 %, ambre sinon)
+- **Streak actif** : badge feu qui s’illumine au-delà de 5 jours
+
+Chaque pastille bénéficie de micro-interactions (hover, focus) et s’adapte automatiquement au thème et au mode réduit motion.
+
+### Actions rapides
+- **Mode focus** : verrouille/restore la navigation et les widgets (persisté dans `localStorage`)
+- **Basculer clair/sombre** : déclenche le thème actuel avec log UI pour diagnostics
+- **Preset de palette** : sélection Solarized / Nord / Dracula / Gruvbox ou auto (applique `themePreset` côté store)
+
+### Statistiques globales
+- Widget compact `GlobalStatsWidget` (variant `summary`) directement intégré au cockpit
+- Nouveaux états : skeleton fluide, badge « à rafraîchir » si les données ont > 5 min
+- Bouton **Actualiser** déclenche `refresh()` immédiatement sans bloquer l’interface (mise à jour en tâche idle)
+- L’horodatage de la dernière mise à jour apparaît en suffixe de la mention « Navigation étendue/compacte »
+
+### Conseils d’utilisation
+- **Raccourci focus** : cliquez ou utilisez la palette de commandes pour alterner rapidement durant une session d’étude
+- **Vitesse de transition** : les halos et progress bars sont accélérés (450 ms) tout en respectant `prefers-reduced-motion`
+- **Surcharge visuelle** : si nécessaire, activez le mode réduit motion pour des surfaces plus sobres et des gradients atténués
+
 ---
 
 ### 2. Premier Lancement
@@ -471,12 +497,53 @@ await transition.animateIn(element, {
 
 ## ♻️ Persistance & Restauration
 
-- Paramètres stockés via Zustand persist (localStorage clé `cards-settings`).
-- Focus Mode persistant (`cards-focus-mode`).
-- Sessions d'étude actives stockées par deck (`cards.activeSession.{deckId}`) et restaurées automatiquement.
 
----
 
----
+## 📥 Import/Export de Decks et Médias
 
-*Cards - Maîtrisez vos révisions avec l'IA et la gamification* 🎯
+### Formats supportés (Import Deck)
+- CSV, TXT, JSON, XLS/XLSX
+- PDF (avec option de segmentation par titres)
+- APKG (Anki)
+- DOCX (Word)
+
+### Bonnes pratiques par format
+- CSV/XLSX:
+  - Mapping de colonnes disponible (Front, Back, Tags)
+  - Détection auto des séparateurs CSV et en-têtes
+  - Les balises HTML sûres sont conservées (sanitisation)
+  - Tags: colonne dédiée ou séparés par `,` ou `;`
+- TXT:
+  - Paire par lignes: ligne 1 = Front, ligne 2 = Back, puis répétition
+  - Lignes vides ignorées
+- PDF:
+  - Option “Segmenter par titres” pour découper le document
+  - Heuristique basée sur niveaux de titres (peut varier selon le PDF)
+- APKG (Anki):
+  - Extraction des notes, tags, et médias (images/sons)
+  - Conversion HTML -> contenu sécurisé pour l’affichage
+  - Respect des références media `[sound:...]` et <img>
+- DOCX (Word):
+  - Conversion en HTML avec préservation des styles sûrs (gras, italique, couleurs, surlignages)
+  - Tables: chaque ligne (≥2 colonnes) peut devenir une carte (col.1 = Front, col.2 = Back)
+  - Alternativement: segmentation par titres (H1–H3) → titre = Front, section = Back
+  - Sinon: couplage de paragraphes consécutifs
+  - Images intégrées importées et liées aux cartes
+
+### Médias et sécurité
+- Import/Export d’une archive médias au format ZIP (manifest + fichiers)
+- Images, audio, GIF/animations supportés selon le navigateur
+- Sanitisation DOMPurify pour empêcher scripts/attributs dangereux
+- HTML riche autorisé (titres H1–H6, listes, tableaux, styles de couleur/surlignage) en mode sécurisé
+
+### Performances
+- Option “Utiliser worker” pour les formats lourds (APKG/PDF) afin d’éviter de bloquer l’UI
+- Progression et phases d’import affichées en temps réel
+
+### Dépannage
+- Si un champ n’apparaît pas: vérifier le mapping (CSV/XLSX)
+- PDF non segmenté correctement: désactiver l’option ou réviser la structure de titres
+- DOCX complexe: privilégier une table deux colonnes pour un mapping fiable
+- Après import médias: utiliser le “Re-scan intégrité” pour contrôler tailles/présence
+
+

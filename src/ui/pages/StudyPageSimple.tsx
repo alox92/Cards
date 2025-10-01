@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useNavigate, useParams } from 'react-router-dom'
 import { container } from '@/application/Container'
 import { DECK_SERVICE_TOKEN, DeckService } from '@/application/services/DeckService'
+import { logger } from '@/utils/logger'
 
 type StudyMode = 'quiz' | 'speed' | 'matching' | 'writing' | 'review'
 
@@ -75,7 +76,7 @@ const StudyPageSimple = () => {
   const handleStartStudy = (mode: StudyMode) => {
     setSelectedMode(mode)
     setIsStudying(true)
-    console.log(`🎓 Démarrage de l'étude en mode ${mode}`)
+    logger.info('StudyPageSimple', 'Démarrage étude', { mode })
     
     // Simulation d'une session d'étude
     setTimeout(() => {

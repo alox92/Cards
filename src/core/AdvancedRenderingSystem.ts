@@ -5,6 +5,8 @@
  * et adaptation dynamique de la qualité selon les capacités de l'appareil.
  */
 
+import { logger } from '@/utils/logger'
+
 export type RenderQuality = 'low' | 'medium' | 'high' | 'ultra'
 export type AnimationProfile = 'reduced' | 'standard' | 'enhanced' | 'premium'
 
@@ -101,7 +103,7 @@ export class AdvancedRenderingSystem {
       hardwareConcurrency: navigator.hardwareConcurrency || 4
     }
 
-    console.log('🎨 Capacités de rendu détectées:', this.capabilities)
+    logger.info('AdvancedRenderingSystem', '🎨 Capacités de rendu détectées', { capabilities: this.capabilities })
     
     // Auto-ajuster la qualité selon les capacités
     this.autoAdjustQuality()
@@ -185,7 +187,7 @@ export class AdvancedRenderingSystem {
         try {
           callback(deltaTime)
         } catch (error) {
-          console.error('Erreur dans callback de rendu:', error)
+          logger.error('AdvancedRenderingSystem', 'Erreur dans callback de rendu', { error })
         }
       })
 
@@ -224,7 +226,7 @@ export class AdvancedRenderingSystem {
     
     // Si les FPS chutent, réduire la qualité
     if (fps < 30 && this.renderQuality !== 'low') {
-      console.warn('⚠️ FPS faible détecté, réduction qualité de rendu')
+      logger.warn('AdvancedRenderingSystem', '⚠️ FPS faible détecté, réduction qualité de rendu', { fps })
       this.downgradeQuality()
     }
     
@@ -294,12 +296,12 @@ export class AdvancedRenderingSystem {
     }
 
     if (!this.gl) {
-      console.warn('⚠️ WebGL non supporté, fallback vers Canvas 2D')
+      logger.warn('AdvancedRenderingSystem', '⚠️ WebGL non supporté, fallback vers Canvas 2D')
       return false
     }
 
     this.setupWebGLOptimizations()
-    console.log('✅ WebGL initialisé avec succès')
+    logger.info('AdvancedRenderingSystem', '✅ WebGL initialisé avec succès')
     return true
   }
 
@@ -340,7 +342,7 @@ export class AdvancedRenderingSystem {
     this.gl.compileShader(shader)
 
     if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
-      console.error('Erreur compilation shader:', this.gl.getShaderInfoLog(shader))
+      logger.error('AdvancedRenderingSystem', 'Erreur compilation shader', { log: this.gl.getShaderInfoLog(shader) })
       this.gl.deleteShader(shader)
       return null
     }
@@ -447,7 +449,7 @@ export class AdvancedRenderingSystem {
   public setRenderQuality(quality: RenderQuality): void {
     this.renderQuality = quality
     this.updateRenderSettings()
-    console.log(`🎨 Qualité de rendu: ${quality}`)
+    logger.info('AdvancedRenderingSystem', `🎨 Qualité de rendu: ${quality}`)
   }
 
   /**
@@ -456,7 +458,7 @@ export class AdvancedRenderingSystem {
   public setAnimationProfile(profile: AnimationProfile): void {
     this.animationProfile = profile
     this.updateAnimationSettings()
-    console.log(`🎭 Profil d'animation: ${profile}`)
+    logger.info('AdvancedRenderingSystem', `🎭 Profil d'animation: ${profile}`)
   }
 
   /**
@@ -528,7 +530,7 @@ export class AdvancedRenderingSystem {
 
     this.frameCallbacks.clear()
     
-    console.log('🧹 Advanced Rendering System nettoyé')
+    logger.info('AdvancedRenderingSystem', '🧹 Advanced Rendering System nettoyé')
   }
 
   /**

@@ -6,7 +6,7 @@ import { container } from '@/application/Container'
 import { DECK_SERVICE_TOKEN, DeckService } from '@/application/services/DeckService'
 import { CARD_SERVICE_TOKEN, CardService } from '@/application/services/CardService'
 import FuturisticLayout from '@/ui/components/layout/FuturisticLayout'
-import { useFeedback } from '@/ui/components/feedback/FeedbackCenter'
+import { useFeedback } from '@/ui/components/feedback/useFeedback'
 
 const DecksPage: React.FC = () => {
   const navigate = useNavigate()

@@ -1,18 +1,6 @@
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
+import { FeedbackCenterContext, FeedbackCenterContextValue, FeedbackType } from './FeedbackCenterContext'
 
-type FeedbackType = 'click' | 'success' | 'error' | 'warning'
-
-interface FeedbackCenterContextValue {
-  play: (type?: FeedbackType) => void
-  successParticles: (accuracy: number) => void
-  enableSound: boolean
-  enableHaptics: boolean
-  toggleSound: () => void
-  toggleHaptics: () => void
-  particlesRequest?: { id: number; intensity: number }
-}
-
-const FeedbackCenterContext = createContext<FeedbackCenterContextValue | null>(null)
 let particleIdSeq = 0
 
 export const FeedbackCenterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -49,7 +37,7 @@ export const FeedbackCenterProvider: React.FC<{ children: React.ReactNode }> = (
     play('success')
   }, [play])
 
-  const value = useMemo(() => ({
+  const value: FeedbackCenterContextValue = useMemo(() => ({
     play,
     successParticles,
     enableSound,
@@ -62,8 +50,4 @@ export const FeedbackCenterProvider: React.FC<{ children: React.ReactNode }> = (
   return <FeedbackCenterContext.Provider value={value}>{children}</FeedbackCenterContext.Provider>
 }
 
-export function useFeedback(){
-  const ctx = useContext(FeedbackCenterContext)
-  if(!ctx) throw new Error('useFeedback must be used inside FeedbackCenterProvider')
-  return ctx
-}
+// Note: le hook useFeedback a été déplacé dans useFeedback.ts pour respecter la règle react-refresh/only-export-components

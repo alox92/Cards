@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useRef } from 'react'
+import { downloadDocxDeckTemplate } from '@/utils/docxTemplate'
 import { exportMediaZip, importMediaZip, exportMediaArchive, exportMediaZipIncremental } from '@/application/media/mediaExportImport'
 import { importDeckMultiFormat } from '@/application/import/deckMultiFormatImport'
 import { container } from '@/application/Container'
 import { MEDIA_REPOSITORY_TOKEN, DexieMediaRepository } from '@/infrastructure/persistence/dexie/DexieMediaRepository'
-import { useFeedback } from '@/ui/components/feedback/FeedbackCenter'
+import { useFeedback } from '@/ui/components/feedback/useFeedback'
 
 // Heuristique: considérer "récemment modifié" si created >= now - delta
 const RECENT_DELTA_MS = 1000 * 60 * 60 * 24 * 7 // 7 jours
@@ -284,7 +285,7 @@ const MediaArchivePage: React.FC = () => {
           <input ref={fileInputRef} type="file" accept="application/zip" className="hidden" onChange={handleFileChange} />
           <div className="mt-4">
             <h3 className="font-medium text-sm mb-1">Import Deck multi-format</h3>
-            <p className="text-[11px] text-gray-500 mb-2">Formats: csv, txt, json, pdf, xlsx, apkg. CSV/XLSX: mapping colonnes possible. PDF: option segmentation titres.</p>
+            <p className="text-[11px] text-gray-500 mb-2">Formats: csv, txt, json, pdf, xls/xlsx, apkg, docx. CSV/XLSX: mapping colonnes possible. PDF: option segmentation titres. DOCX: tables 2 colonnes recommandées pour un mapping fiable.</p>
             <label className="flex items-center gap-2 text-[11px] mb-2">
               <input type="checkbox" checked={useWorker} onChange={e=> setUseWorker(e.target.checked)} />
               Utiliser worker (apkg/pdf) pour parsing non bloquant
@@ -294,7 +295,20 @@ const MediaArchivePage: React.FC = () => {
               Segmenter PDF par titres (expérimental)
             </label>
             <button onClick={handleDeckImportClick} className="px-3 py-1.5 text-sm rounded bg-teal-600 hover:bg-teal-700 text-white">📥 Importer deck (multi-format)</button>
-            <input ref={deckImportInputRef} type="file" accept=".csv,.txt,.json,.pdf,.xls,.xlsx,.apkg" className="hidden" onChange={handleDeckFileChange} />
+            <input ref={deckImportInputRef} type="file" accept=".csv,.txt,.json,.pdf,.xls,.xlsx,.apkg,.docx" className="hidden" onChange={handleDeckFileChange} />
+            <div className="mt-2">
+              <button onClick={downloadDocxDeckTemplate} className="px-3 py-1.5 text-xs rounded bg-gray-600 hover:bg-gray-700 text-white">⬇️ Télécharger le modèle DOCX</button>
+            </div>
+            <details className="mt-3 text-[11px] text-gray-600 dark:text-gray-400">
+              <summary className="cursor-pointer">Aide import formats</summary>
+              <ul className="list-disc pl-4 space-y-0.5 mt-1">
+                <li>CSV/XLSX: choisissez les colonnes Front/Back/Tags via le mapping. Tags séparés par "," ou ";".</li>
+                <li>DOCX (Word): privilégiez une table à 2 colonnes (Front/Back). Sinon, titres H1–H3 seront utilisés pour segmenter. Vous pouvez utiliser le <em>modèle DOCX</em> (bouton ci-dessus).</li>
+                <li>PDF: l’option « Segmenter par titres » essaie de découper selon la structure des titres du document.</li>
+                <li>APKG (Anki): notes, tags et médias sont importés; les références [sound:...] et images sont préservées.</li>
+                <li>Sécurité: le contenu riche est assaini (DOMPurify). Les scripts/attributs dangereux sont supprimés.</li>
+              </ul>
+            </details>
             {showMapping && (
               <div className="mt-4 p-3 border rounded bg-gray-50 dark:bg-gray-900 dark:border-gray-700">
                 <h4 className="font-medium text-xs mb-2">Mapping des colonnes {xlsxSheets.length>1 && '(XLSX)'} </h4>

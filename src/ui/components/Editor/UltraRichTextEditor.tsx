@@ -5,6 +5,8 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { sanitizeRich, stripBidiControls, escapeHtml } from '@/utils/sanitize'
+import { logger } from '@/utils/logger'
 
 interface RichTextEditorProps {
   value: string
@@ -62,7 +64,6 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
   onChange,
   placeholder = "🎯 Créez du contenu extraordinaire...",
   className = "",
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
     // props maxLength & theme retirés (non utilisés)
   // theme retiré
   onImageUpload,
@@ -83,15 +84,28 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
   const [showFontPicker, setShowFontPicker] = useState(false)
   const [showSizePicker, setShowSizePicker] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [focusMode, setFocusMode] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const [selectedFont, setSelectedFont] = useState('Arial')
   const [selectedSize, setSelectedSize] = useState('14')
   const [wordCount, setWordCount] = useState(0)
   const [charCount, setCharCount] = useState(0)
 
   const editorRef = useRef<HTMLDivElement>(null)
+  // Évite d'écraser la saisie en cours par une resynchronisation depuis la prop value
+  const isTypingRef = useRef(false)
+  const typingResetTimer = useRef<number | null>(null)
+  const changeDebounceTimer = useRef<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const audioInputRef = useRef<HTMLInputElement>(null)
   const pdfInputRef = useRef<HTMLInputElement>(null)
+  const [isDraggingOver, setIsDraggingOver] = useState(false)
+  const endTypingSafely = useCallback(() => {
+    isTypingRef.current = false
+    if (editorRef.current) {
+      try { (editorRef.current.style as any).unicodeBidi = 'isolate' } catch {}
+    }
+  }, [])
 
   // Animations fluides pour les boutons
   const buttonVariants = {
@@ -114,6 +128,16 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
       boxShadow: "0 0 20px rgba(240, 147, 251, 0.4)"
     }
   }
+
+  const GROUP_TITLES: Record<string, string> = useMemo(() => ({
+    text: 'Texte',
+    style: 'Style',
+    format: 'Format',
+    align: 'Alignement',
+    list: 'Listes',
+    media: 'Médias',
+    tools: 'Outils'
+  }), [])
 
   // Mettre à jour les compteurs
   const updateCounts = useCallback((html: string) => {
@@ -170,14 +194,35 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
   // Gestion du contenu
   const handleContentChange = useCallback(() => {
     if (!editorRef.current) return
-    
     const newContent = editorRef.current.innerHTML
-    if (newContent !== state.content) {
-      setState(prev => ({ ...prev, content: newContent }))
-      onChange(newContent)
-      updateCounts(newContent)
+    // Ne pas toucher au state pendant la frappe pour préserver le caret
+    updateCounts(newContent)
+    if (changeDebounceTimer.current) {
+      window.clearTimeout(changeDebounceTimer.current)
     }
-  }, [state.content, onChange, updateCounts])
+    changeDebounceTimer.current = window.setTimeout(() => {
+      onChange(newContent)
+      endTypingSafely()
+    }, 180)
+  }, [onChange, updateCounts, endTypingSafely])
+
+  const handleBlur = useCallback(() => {
+    if (!editorRef.current) return
+    const current = editorRef.current.innerHTML
+    // Flush immédiat et sauvegarde historique sur blur
+    if (changeDebounceTimer.current) {
+      window.clearTimeout(changeDebounceTimer.current)
+      changeDebounceTimer.current = null
+    }
+    const sanitized = sanitizeRich(current)
+    if (sanitized !== current) {
+      editorRef.current.innerHTML = sanitized
+    }
+    onChange(sanitized)
+    saveToHistory(sanitized)
+    setState(prev => ({ ...prev, content: sanitized }))
+    updateCounts(sanitized)
+  }, [onChange, saveToHistory, updateCounts])
 
   // Undo/Redo
   const undo = useCallback(() => {
@@ -221,7 +266,17 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
         let url = ''
         if (type === 'image' && onImageUpload) {
           url = await onImageUpload(file)
-          executeCommand('insertImage', url)
+          const figure = `<figure style="text-align:center;">
+            <img src="${url}" alt="" style="max-width:100%;height:auto;border-radius:8px;" />
+            <figcaption contenteditable="true" style="color:#6b7280;font-size:12px;margin-top:6px;">Légende…</figcaption>
+          </figure>`
+          executeCommand('insertHTML', figure)
+          // Appliquer un style par défaut et activer la toolbar flottante
+          requestAnimationFrame(() => {
+            if (!editorRef.current) return
+            const imgs = editorRef.current.querySelectorAll('img[src="' + url.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + '"]')
+            imgs.forEach(img => { (img as HTMLImageElement).onclick = () => showImageToolbar(img as HTMLImageElement) })
+          })
         } else if (type === 'audio' && onAudioUpload) {
           url = await onAudioUpload(file)
           const audioHtml = `<audio controls src="${url}" style="max-width: 100%; margin: 10px 0;"></audio>`
@@ -232,13 +287,87 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
           executeCommand('insertHTML', pdfHtml)
         }
       } catch (error) {
-        console.error(`Erreur lors du téléchargement ${type}:`, error)
+        logger.error('UltraRichTextEditor', `Erreur lors du téléchargement ${type}`, { error })
       }
     }
   }, [executeCommand, onImageUpload, onAudioUpload, onPdfUpload])
 
+  // Toolbar flottante pour image (alignements et tailles rapides)
+  const showImageToolbar = useCallback((img: HTMLImageElement) => {
+    // Nettoyer ancienne toolbar
+    document.querySelectorAll('.img-toolbar').forEach(n => n.remove())
+    const toolbar = document.createElement('div')
+    toolbar.className = 'img-toolbar'
+    toolbar.innerHTML = `
+      <button data-a="left" title="Aligner à gauche">⬅️</button>
+      <button data-a="center" title="Centrer">↔️</button>
+      <button data-a="right" title="Aligner à droite">➡️</button>
+      <span class="sep"></span>
+      <button data-s="sm" title="Petit">S</button>
+      <button data-s="md" title="Moyen">M</button>
+      <button data-s="lg" title="Grand">L</button>
+      <button data-s="fit" title="Pleine largeur">100%</button>
+    `
+    const applyAlign = (a: string) => {
+      img.style.display = 'block'
+      img.style.marginLeft = a === 'left' ? '0' : 'auto'
+      img.style.marginRight = a === 'right' ? '0' : 'auto'
+      img.style.margin = a === 'center' ? '12px auto' : '12px 0'
+    }
+    const applySize = (s: string) => {
+      const map: Record<string, string> = { sm: '35%', md: '60%', lg: '80%', fit: '100%' }
+      img.style.width = map[s] || '60%'
+      img.style.maxWidth = '100%'
+      img.style.height = 'auto'
+    }
+    toolbar.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement
+      if (t.dataset.a) applyAlign(t.dataset.a)
+      if (t.dataset.s) applySize(t.dataset.s)
+    })
+    const rect = img.getBoundingClientRect()
+    Object.assign(toolbar.style as unknown as Record<string, string>, {
+      position: 'fixed',
+      top: `${Math.max(8, rect.top - 44)}px`,
+      left: `${Math.max(8, rect.left)}px`,
+      background: 'rgba(0,0,0,0.75)',
+      color: '#fff',
+      padding: '6px 8px',
+      borderRadius: '10px',
+      display: 'flex',
+      gap: '6px',
+      alignItems: 'center',
+      zIndex: '10000',
+      boxShadow: '0 8px 18px rgba(0,0,0,0.3)'
+    })
+    document.body.appendChild(toolbar)
+    const remove = () => toolbar.remove()
+    setTimeout(() => {
+      window.addEventListener('scroll', remove, { once: true })
+      window.addEventListener('click', (ev) => { if (!toolbar.contains(ev.target as Node)) remove() }, { once: true })
+    }, 0)
+  }, [])
+
   // Raccourcis clavier
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Marque qu'on est en train de taper
+    isTypingRef.current = true
+    if (typingResetTimer.current) { window.clearTimeout(typingResetTimer.current) }
+    if (editorRef.current) {
+      try { (editorRef.current.style as any).unicodeBidi = 'bidi-override' } catch {}
+    }
+    // Empêche les toggles de direction involontaires (Ctrl+Shift)
+    if (e.ctrlKey && e.key === 'Shift') {
+      e.preventDefault()
+      e.stopPropagation()
+      return
+    }
+    // Interdire Alt+Shift qui bascule la direction sur certains OS
+    if (e.altKey && e.key.toLowerCase() === 'shift') {
+      e.preventDefault()
+      e.stopPropagation()
+      return
+    }
     if (e.ctrlKey || e.metaKey) {
       switch (e.key) {
         case 'b':
@@ -268,6 +397,36 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
       }
     }
   }, [executeCommand, undo, redo])
+
+  const handleKeyUp = useCallback(() => {
+    if (typingResetTimer.current) { window.clearTimeout(typingResetTimer.current) }
+    typingResetTimer.current = window.setTimeout(() => {
+      endTypingSafely()
+    }, 120)
+  }, [endTypingSafely])
+
+  // Avant insertion de texte: supprime les caractères BiDi invisibles susceptibles d'inverser l'ordre
+  // beforeinput retiré pour éviter tout conflit avec la position du caret
+
+  // Coller: nettoyer HTML/Text du presse-papiers et insérer du HTML sûr LTR
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    isTypingRef.current = true
+    if (typingResetTimer.current) { window.clearTimeout(typingResetTimer.current) }
+    e.preventDefault()
+    const dt = e.clipboardData
+    let html = dt.getData('text/html')
+    const text = dt.getData('text/plain')
+    let toInsert = ''
+    if (html) {
+      toInsert = sanitizeRich(html)
+    } else if (text) {
+      toInsert = escapeHtml(stripBidiControls(text)).replace(/\n/g, '<br>')
+    }
+    if (toInsert) {
+      try { document.execCommand('insertHTML', false, toInsert) } catch {}
+    }
+    typingResetTimer.current = window.setTimeout(() => { endTypingSafely() }, 120)
+  }, [endTypingSafely])
 
   // Outils de formatage avec animations
   const formatButtons = useMemo(() => [
@@ -326,32 +485,54 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
         { command: 'insertAudio', icon: '🎵', label: 'Insérer un audio', special: 'audio' } as ButtonConfig,
         { command: 'insertPdf', icon: '📄', label: 'Insérer un PDF', special: 'pdf' } as ButtonConfig,
         { command: 'createLink', icon: '🔗', label: 'Lien' } as ButtonConfig,
-        { command: 'insertHorizontalRule', icon: '➖', label: 'Ligne horizontale' } as ButtonConfig
+        { command: 'insertHorizontalRule', icon: '➖', label: 'Ligne horizontale' } as ButtonConfig,
+        { command: 'removeFormat', icon: '🧹', label: 'Effacer le formatage' } as ButtonConfig,
+        { command: 'selectAll', icon: '⌘A', label: 'Tout sélectionner' } as ButtonConfig
       ]
     },
     {
       group: 'tools',
       buttons: [
         { command: 'undo', icon: '↶', label: 'Annuler', hotkey: 'Ctrl+Z', special: 'undo' } as ButtonConfig,
-        { command: 'redo', icon: '↷', label: 'Rétablir', hotkey: 'Ctrl+Shift+Z', special: 'redo' } as ButtonConfig,
-        { command: 'removeFormat', icon: '🧹', label: 'Effacer le formatage' } as ButtonConfig,
-        { command: 'selectAll', icon: '⌘A', label: 'Tout sélectionner' } as ButtonConfig
+        { command: 'redo', icon: '↷', label: 'Rétablir', hotkey: 'Ctrl+Shift+Z', special: 'redo' } as ButtonConfig
       ]
     }
   ], [])
 
   // Initialisation
   useEffect(() => {
-    if (editorRef.current && value !== state.content) {
+    if (!editorRef.current) return
+    if (isTypingRef.current) return // ne pas écraser pendant la saisie
+    const domHtml = editorRef.current.innerHTML
+    if (value !== domHtml) {
       editorRef.current.innerHTML = value
       setState(prev => ({ ...prev, content: value }))
       updateCounts(value)
     }
-  }, [value, state.content, updateCounts])
+    // Forcer le mode LTR du document d'édition pour éviter toute auto-détection
+    try {
+      document.execCommand('dirLTR', false)
+    } catch {}
+  }, [value, updateCounts])
+
+  // Restore focus mode from localStorage
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem('editorFocusMode')
+      if (v === '1') setFocusMode(true)
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (typingResetTimer.current) window.clearTimeout(typingResetTimer.current)
+      if (changeDebounceTimer.current) window.clearTimeout(changeDebounceTimer.current)
+    }
+  }, [])
 
   return (
     <motion.div 
-      className={`ultra-rich-editor ${isFullscreen ? 'fullscreen' : ''} ${className}`}
+      className={`ultra-rich-editor ${isFullscreen ? 'fullscreen' : ''} ${focusMode ? 'focus-mode' : ''} ${className}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
@@ -359,6 +540,8 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
       {/* Toolbar avec animations */}
       <motion.div 
         className="toolbar"
+        role="toolbar"
+        aria-label="Outils de mise en forme"
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.3, delay: 0.1 }}
@@ -371,6 +554,7 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.2, delay: groupIndex * 0.05 }}
           >
+            <div className="group-title" aria-hidden="true">{GROUP_TITLES[group.group as keyof typeof GROUP_TITLES] || group.group}</div>
             {group.buttons.map((button) => {
               const handleClick = () => {
                 if (button.special === 'color') {
@@ -408,13 +592,16 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
                   animate={activeTools.has(button.command) ? "active" : "idle"}
                   onClick={handleClick}
                   title={`${button.label}${button.hotkey ? ` (${button.hotkey})` : ''}`}
+                  aria-label={button.label}
                 >
                   <motion.span
+                    className="btn-icon"
                     animate={{ rotate: activeTools.has(button.command) ? 360 : 0 }}
                     transition={{ duration: 0.3 }}
                   >
                     {button.icon}
                   </motion.span>
+                  <span className="btn-label">{button.label}</span>
                 </motion.button>
               )
             })}
@@ -429,13 +616,66 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
           whileHover="hover"
           whileTap="tap"
           onClick={() => setIsFullscreen(!isFullscreen)}
+          aria-label={isFullscreen ? 'Quitter le plein écran' : 'Passer en plein écran'}
         >
           {isFullscreen ? '⛶' : '⛶'}
+        </motion.button>
+        <motion.button
+          className="fullscreen-button"
+          variants={buttonVariants}
+          initial="idle"
+          whileHover="hover"
+          whileTap="tap"
+          onClick={() => {
+            setFocusMode(v => {
+              const nv = !v
+              try { localStorage.setItem('editorFocusMode','' + (nv ? 1 : 0)) } catch {}
+              return nv
+            })
+          }}
+          aria-label={focusMode ? 'Désactiver le mode focalisation' : 'Activer le mode focalisation'}
+          title={focusMode ? 'Mode focalisation: désactiver' : 'Mode focalisation: activer'}
+        >
+          🎯
+        </motion.button>
+        <motion.button
+          className="fullscreen-button"
+          variants={buttonVariants}
+          initial="idle"
+          whileHover="hover"
+          whileTap="tap"
+          onClick={() => setShowHelp(s=>!s)}
+          aria-label={showHelp ? 'Masquer l’aide' : 'Afficher l’aide'}
+          title="Aide & Raccourcis"
+        >
+          ?
         </motion.button>
       </motion.div>
 
       {/* Sélecteurs de couleurs avec animations */}
       <AnimatePresence>
+        {showHelp && (
+          <motion.div 
+            className="help-panel"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15 }}
+          >
+            <div className="help-content">
+              <div className="help-title">Légende & Raccourcis</div>
+              <ul>
+                <li><b>Texte</b>: Gras (Ctrl+B), Italique (Ctrl+I), Souligné (Ctrl+U), Indice/Exposant</li>
+                <li><b>Style</b>: Couleur, Surlignage, Police, Taille</li>
+                <li><b>Format</b>: Titres (H1..H3), Paragraphe, Citation</li>
+                <li><b>Alignement</b>: Gauche, Centre, Droite, Justifié</li>
+                <li><b>Listes</b>: Puces, Numérotée, Indenter/Désindenter</li>
+                <li><b>Médias</b>: Image, Audio, PDF, Lien</li>
+                <li><b>Outils</b>: Annuler (Ctrl+Z), Rétablir (Ctrl+Shift+Z), Effacer format, Tout sélectionner</li>
+              </ul>
+            </div>
+          </motion.div>
+        )}
         {showColorPicker && (
           <motion.div 
             className="color-picker"
@@ -548,7 +788,7 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
       {/* Zone d'édition avec animations */}
       <motion.div
         className="editor-container"
-        style={{ height }}
+        style={{ height, direction: 'ltr' as const }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3, delay: 0.2 }}
@@ -556,10 +796,37 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
         <div
           ref={editorRef}
           className="editor-content"
+          dir="ltr"
           contentEditable
           suppressContentEditableWarning
+          onDragOver={(e)=>{ e.preventDefault(); setIsDraggingOver(true) }}
+          onDragLeave={()=> setIsDraggingOver(false)}
+          onDrop={async (e)=>{
+            e.preventDefault(); setIsDraggingOver(false)
+            if(!onImageUpload) return
+            const files = [...(e.dataTransfer?.files || [])]
+            const image = files.find(f=> /^image\//i.test(f.type))
+            if(!image) return
+            try {
+              const url = await onImageUpload(image)
+              const figure = `<figure style="text-align:center;">
+                <img src="${url}" alt="" style="max-width:100%;height:auto;border-radius:8px;" />
+                <figcaption contenteditable="true" style="color:#6b7280;font-size:12px;margin-top:6px;">Légende…</figcaption>
+              </figure>`
+              executeCommand('insertHTML', figure)
+              requestAnimationFrame(()=>{
+                if(!editorRef.current) return
+                const imgs = editorRef.current.querySelectorAll('img[src="' + url.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + '"]')
+                imgs.forEach(img=>{ (img as HTMLImageElement).onclick = () => showImageToolbar(img as HTMLImageElement) })
+              })
+            } catch(err){ logger.error('UltraRichTextEditor', 'Drop image failed', { err }) }
+          }}
+          
+          onPaste={handlePaste}
           onInput={handleContentChange}
           onKeyDown={handleKeyDown}
+          onKeyUp={handleKeyUp}
+          onBlur={handleBlur}
           data-placeholder={placeholder}
           style={{
             minHeight: height,
@@ -569,10 +836,17 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
             lineHeight: '1.6',
             outline: 'none',
             border: 'none',
-            background: 'transparent'
+            background: 'transparent',
+            direction: 'ltr',
+            unicodeBidi: 'isolate' as any,
+            textAlign: 'left'
           }}
-          dangerouslySetInnerHTML={{ __html: state.content }}
         />
+        {isDraggingOver && (
+          <div className="drop-overlay" aria-hidden>
+            Déposez une image pour l’insérer
+          </div>
+        )}
       </motion.div>
 
       {/* Barre de statut avec animations */}
@@ -631,6 +905,13 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
           will-change: transform, box-shadow;
         }
 
+  /* Mode focalisation: toolbar compacte, labels masqués */
+  .ultra-rich-editor.focus-mode .group-title { display: none; }
+  .ultra-rich-editor.focus-mode .toolbar { gap: 8px; }
+  .ultra-rich-editor.focus-mode .button-group { gap: 4px; padding: 8px; }
+  .ultra-rich-editor.focus-mode .format-button { width: 48px; height: 48px; }
+  .ultra-rich-editor.focus-mode .btn-label { display: none; }
+
         .ultra-rich-editor:hover {
           box-shadow: 0 25px 50px rgba(0,0,0,0.15);
           transform: translateY(-2px);
@@ -647,11 +928,11 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
         }
 
         .toolbar {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          padding: 16px;
+          background: linear-gradient(135deg, #5f6ad4 0%, #764ba2 100%);
+          padding: 12px 16px;
           display: flex;
           flex-wrap: wrap;
-          gap: 12px;
+          gap: 14px;
           border-bottom: 1px solid rgba(255,255,255,0.2);
           backdrop-filter: blur(10px);
           position: relative;
@@ -676,32 +957,50 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
 
         .button-group {
           display: flex;
-          gap: 4px;
-          background: rgba(255,255,255,0.15);
+          gap: 6px;
+          background: rgba(255,255,255,0.18);
           border-radius: 12px;
-          padding: 6px;
+          padding: 10px 10px 12px;
           backdrop-filter: blur(5px);
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           will-change: transform, background;
+          border: 1px solid rgba(255,255,255,0.25);
+          position: relative;
         }
 
         .button-group:hover {
-          background: rgba(255,255,255,0.25);
+          background: rgba(255,255,255,0.28);
           transform: translateY(-1px);
         }
 
+        .group-title {
+          position: absolute;
+          top: -10px;
+          left: 12px;
+          background: rgba(255,255,255,0.9);
+          color: #4a4a4a;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 2px 8px;
+          border-radius: 8px;
+          border: 1px solid rgba(0,0,0,0.05);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+
         .format-button, .fullscreen-button {
-          width: 44px;
-          height: 44px;
+          width: 64px;
+          height: 64px;
           border: none;
           border-radius: 10px;
           color: white;
-          font-size: 16px;
+          font-size: 18px;
           font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
+          flex-direction: column;
+          gap: 4px;
           backdrop-filter: blur(10px);
           position: relative;
           overflow: hidden;
@@ -722,6 +1021,18 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
 
         .format-button:hover:before {
           left: 100%;
+        }
+
+        .btn-icon {
+          line-height: 1;
+        }
+
+        .btn-label {
+          font-size: 10px;
+          font-weight: 600;
+          opacity: 0.95;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+          user-select: none;
         }
 
         .color-picker, .highlight-picker, .font-picker, .size-picker {
@@ -804,11 +1115,43 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
         }
 
         .editor-container {
-          background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+          background: linear-gradient(135deg, #ffffff 0%, #f4f6ff 100%);
           position: relative;
           overflow-y: auto;
           border-radius: 0 0 16px 16px;
         }
+        .drop-overlay {
+          position: absolute;
+          inset: 0;
+          background: rgba(102,126,234,0.08);
+          border: 2px dashed rgba(102,126,234,0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #4a56c8;
+          font-weight: 700;
+          letter-spacing: .2px;
+          pointer-events: none;
+          border-radius: 0 0 16px 16px;
+        }
+        .help-panel {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          z-index: 1200;
+        }
+        .help-content {
+          background: rgba(255,255,255,0.98);
+          border: 1px solid rgba(0,0,0,0.06);
+          border-radius: 12px;
+          padding: 14px 16px;
+          box-shadow: 0 14px 30px rgba(0,0,0,0.15);
+          min-width: 280px;
+          color: #333;
+        }
+        .help-title { font-weight: 700; font-size: 13px; margin-bottom: 8px; color: #444; }
+        .help-content ul { margin: 0; padding-left: 16px; display: grid; gap: 6px; font-size: 12px; }
+
 
         .editor-content {
           background: transparent;
@@ -817,7 +1160,11 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
           color: #333;
           word-wrap: break-word;
           transition: all 0.3s ease;
+          direction: ltr;
+          unicode-bidi: isolate;
         }
+
+        /* LTR appliqué au conteneur suffit; pas de forçage global pour éviter les effets inattendus */
 
         .editor-content:empty:before {
           content: attr(data-placeholder);
@@ -840,6 +1187,19 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
           box-shadow: 0 8px 25px rgba(0,0,0,0.15);
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        .img-toolbar button {
+          background: rgba(255,255,255,0.15);
+          color: #fff;
+          border: 1px solid rgba(255,255,255,0.25);
+          border-radius: 6px;
+          padding: 4px 6px;
+          cursor: pointer;
+          font-size: 12px;
+        }
+        .img-toolbar button:hover {
+          background: rgba(255,255,255,0.28);
+        }
+        .img-toolbar .sep { width: 1px; height: 16px; background: rgba(255,255,255,0.35); display: inline-block; }
 
         .editor-content img:hover {
           transform: scale(1.02);
@@ -895,7 +1255,7 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
         }
 
         .status-bar {
-          background: linear-gradient(135deg, #f1f3f4 0%, #e8eaf6 100%);
+          background: linear-gradient(135deg, #eef1f6 0%, #e6e9f8 100%);
           padding: 12px 20px;
           display: flex;
           justify-content: space-between;
@@ -954,15 +1314,16 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
           }
           
           .button-group {
-            gap: 2px;
-            padding: 4px;
+            gap: 6px;
+            padding: 10px;
           }
           
           .format-button {
-            width: 36px;
-            height: 36px;
-            font-size: 14px;
+            width: 52px;
+            height: 52px;
+            font-size: 16px;
           }
+          .btn-label { display: none; }
           
           .status-bar {
             flex-direction: column;
@@ -991,10 +1352,8 @@ export const UltraRichTextEditor: React.FC<RichTextEditorProps> = ({
         }
 
         /* Hardware acceleration */
-        .ultra-rich-editor *,
-        .toolbar *,
-        .format-button *,
-        .editor-content * {
+        /* Ne pas forcer l'accélération GPU sur tout le contenu éditable pour éviter tout effet secondaire sur le rendu du texte/caret */
+        .format-button * {
           transform: translateZ(0);
           will-change: transform;
         }

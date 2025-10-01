@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { CardEntity } from '../../../domain/entities/Card'
 import { container } from '@/application/Container'
 import { MEDIA_REPOSITORY_TOKEN, DexieMediaRepository } from '@/infrastructure/persistence/dexie/DexieMediaRepository'
+import { logger } from '@/utils/logger'
 
 const useMediaImage = (idOrData?: string) => {
   const repo = container.resolve<DexieMediaRepository>(MEDIA_REPOSITORY_TOKEN)
@@ -14,7 +15,7 @@ const useMediaImage = (idOrData?: string) => {
     let revoke: string | null = null
     if(!idOrData){ setSrc(undefined); return }
     if(idOrData.startsWith('data:')){ setSrc(idOrData); return }
-    (async ()=> { try { const row = await repo.get(idOrData); if(row){ const url = URL.createObjectURL(row.blob); revoke = url; setSrc(url) } } catch(e){ console.warn('Load media failed', e); setSrc(undefined) } })()
+    (async ()=> { try { const row = await repo.get(idOrData); if(row){ const url = URL.createObjectURL(row.blob); revoke = url; setSrc(url) } } catch(e){ logger.warn('FlashCard', 'Load media failed', { error: e }); setSrc(undefined) } })()
     return ()=> { if(revoke) URL.revokeObjectURL(revoke) }
   }, [idOrData, repo])
   return src

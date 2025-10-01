@@ -63,7 +63,7 @@ export const DebugTestPage: React.FC = () => {
         setLogs(parsedLogs.slice(-20)) // Afficher les 20 derniers logs
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des logs:', error)
+      logger.error('DebugTestPage', 'Erreur récupération logs', { error })
     }
   }
   

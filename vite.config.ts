@@ -11,32 +11,13 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    VitePWA({
+  VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
-      manifest: {
-        name: 'Cards',
-        short_name: 'Cards',
-  description: 'Application de cartes flash ultra-performante (Web PWA)',
-        theme_color: '#3b82f6',
-        background_color: '#ffffff',
-        display: 'standalone',
-        start_url: '/',
-        icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      },
+      includeAssets: ['favicon.ico', 'vite.svg'],
+      manifest: false,
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        navigateFallback: 'offline.html',
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -59,6 +40,7 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] }
             }
           }
+          // stratégie offline additionnelle gérée côté app (navigateFallback déjà configuré)
         ]
       }
     })
@@ -69,12 +51,14 @@ export default defineConfig({
       '@/core': path.resolve(__dirname, './src/core'),
       '@/data': path.resolve(__dirname, './src/data'),
       '@/domain': path.resolve(__dirname, './src/domain'),
+  '@/application': path.resolve(__dirname, './src/application'),
       '@/ui': path.resolve(__dirname, './src/ui'),
       '@/utils': path.resolve(__dirname, './src/utils')
     }
   },
   build: {
     target: 'esnext',
+  sourcemap: process.env.VITE_DEBUG_SOURCEMAP === '1',
     rollupOptions: {
       output: {
         manualChunks: {
@@ -89,10 +73,12 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'dexie']
+  include: ['react', 'react-dom', 'dexie']
   },
   server: {
-    port: 3000,
+  host: '127.0.0.1',
+  port: 5173,
+  strictPort: false,
   // Ouverture auto du navigateur contrôlée par env (Web-only)
     open: process.env.VITE_FORCE_OPEN === '1'
   }

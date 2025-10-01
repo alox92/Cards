@@ -1,35 +1,88 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { TIMING_CONFIGS } from '@/utils/performanceOptimizer'
 
 export const RouteTransitionLayer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation()
-  const [progress, setProgress] = useState(0)
   const [animKey, setAnimKey] = useState(location.pathname)
-  const timerRef = useRef<number>()
+  const reduceMotion = useReducedMotion()
 
-  useEffect(() => {
-    setProgress(0)
-    setAnimKey(location.pathname)
-    const start = performance.now()
-    const step = () => {
-      const elapsed = performance.now() - start
-      const pct = Math.min(95, (elapsed / 700) * 100)
-      setProgress(pct)
-      if (pct < 95) timerRef.current = requestAnimationFrame(step)
+  useEffect(() => { setAnimKey(location.pathname) }, [location])
+
+  const palette = useMemo(() => {
+    const path = location.pathname
+    if(path.startsWith('/study') || path.startsWith('/learn')){
+      return {
+        progress: 'linear-gradient(90deg, #22d3ee, #6366f1, #a855f7)',
+        ambient: 'radial-gradient(circle at 24% 18%, rgba(45,212,191,0.18), transparent 60%), radial-gradient(circle at 80% 16%, rgba(99,102,241,0.18), transparent 65%), radial-gradient(circle at 52% 100%, rgba(59,130,246,0.12), transparent 75%)'
+      }
     }
-    timerRef.current = requestAnimationFrame(step)
-    return () => { if(timerRef.current) cancelAnimationFrame(timerRef.current) }
-  }, [location])
+    if(path.startsWith('/create')){
+      return {
+        progress: 'linear-gradient(90deg, #f97316, #ec4899, #8b5cf6)',
+        ambient: 'radial-gradient(circle at 20% 16%, rgba(249,115,22,0.18), transparent 62%), radial-gradient(circle at 78% 20%, rgba(236,72,153,0.16), transparent 60%), radial-gradient(circle at 50% 100%, rgba(99,102,241,0.14), transparent 70%)'
+      }
+    }
+    if(path.startsWith('/analyze') || path.startsWith('/stats')){
+      return {
+        progress: 'linear-gradient(90deg, #10b981, #22d3ee, #6366f1)',
+        ambient: 'radial-gradient(circle at 18% 20%, rgba(16,185,129,0.18), transparent 55%), radial-gradient(circle at 82% 12%, rgba(14,165,233,0.15), transparent 55%), radial-gradient(circle at 50% 100%, rgba(59,130,246,0.12), transparent 70%)'
+      }
+    }
+    return {
+      progress: 'linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899)',
+      ambient: 'radial-gradient(circle at 20% 20%, rgba(59,130,246,0.16), transparent 55%), radial-gradient(circle at 80% 15%, rgba(236,72,153,0.16), transparent 60%), radial-gradient(circle at 50% 100%, rgba(14,165,233,0.12), transparent 70%)'
+    }
+  }, [location.pathname])
 
-  useEffect(() => { const to = setTimeout(() => setProgress(100), 250); return () => clearTimeout(to) }, [animKey])
+  const progressDuration = reduceMotion ? 0.18 : 0.45
 
   return (
     <div className="relative">
-      <motion.div className="fixed top-0 left-0 h-1 z-50 bg-gradient-to-r from-blue-500 via-fuchsia-500 to-purple-600" animate={{ width: `${progress}%`, opacity: progress >= 100 ? 0 : 1 }} transition={{ ease:'easeOut', duration:0.25 }} />
       <AnimatePresence mode="wait">
-        <motion.div key={animKey} className="fixed inset-0 -z-10 pointer-events-none" initial={{ opacity:0 }} animate={{ opacity:1, background:`radial-gradient(circle at 30% 30%, rgba(99,102,241,0.12), transparent 60%), radial-gradient(circle at 70% 70%, rgba(236,72,153,0.12), transparent 65%)` }} exit={{ opacity:0 }} transition={{ duration:0.6, ease:'easeOut' }} />
+        <motion.div
+          key={`${animKey}-progress`}
+          className="pointer-events-none fixed top-0 left-0 z-50 h-1 origin-left"
+          initial={{ width: '0%', opacity: 1 }}
+          animate={{ width: '100%', opacity: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{
+            ease: TIMING_CONFIGS.SMOOTH_OUT,
+            duration: progressDuration,
+            opacity: { delay: progressDuration * 0.7, duration: 0.25, ease: TIMING_CONFIGS.SMOOTH_OUT }
+          }}
+          style={{ backgroundImage: palette.progress }}
+        />
       </AnimatePresence>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={animKey}
+          className="fixed inset-0 -z-10 pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{
+            opacity: reduceMotion ? 0.32 : 1,
+            background: reduceMotion
+              ? 'radial-gradient(circle at 50% 20%, rgba(99,102,241,0.12), transparent 60%)'
+              : palette.ambient
+          }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0.25 : 0.6, ease: TIMING_CONFIGS.SMOOTH_OUT }}
+        />
+      </AnimatePresence>
+      {!reduceMotion && (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${animKey}-halo`}
+            className="pointer-events-none fixed inset-0 -z-10"
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 0.35, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.05 }}
+            transition={{ duration: 0.6, ease: TIMING_CONFIGS.SMOOTH_OUT }}
+            style={{ background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08), transparent 65%)' }}
+          />
+        </AnimatePresence>
+      )}
       {children}
     </div>
   )

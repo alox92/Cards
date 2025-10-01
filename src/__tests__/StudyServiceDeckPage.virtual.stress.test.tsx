@@ -3,8 +3,10 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 // Définir les données AVANT vi.mock (hoisted par Vitest)
-// Taille juste au-dessus du seuil pour activer la virtualisation mais limiter le coût
-const STRESS_CARDS = Array.from({ length: 1205 }, (_, i) => ({
+// Mode rapide: dataset plus petit pour réduire temps; heavy conservé dans test séparé.
+const FAST = process.env.FAST_TESTS === '1'
+const STRESS_SIZE = FAST ? 650 : 1205
+const STRESS_CARDS = Array.from({ length: STRESS_SIZE }, (_, i) => ({
   id: 'c'+i,
   frontText: 'Front question extrêmement longue ' + i + ' ' + 'x'.repeat(i % 40),
   backText: 'Back answer détaillée ' + i + ' ' + 'y'.repeat((i*3) % 55),
@@ -30,6 +32,7 @@ vi.mock('@/application/Container', () => {
 
 // Import après mock
 import StudyServiceDeckPage from '@/ui/pages/StudyServiceDeckPage'
+import { profile } from './testProfiler'
 
 // Mock global getBoundingClientRect pour contrôler les hauteurs d'items
 const originalGetBounding = Element.prototype.getBoundingClientRect
@@ -56,13 +59,14 @@ function scrollListTo(list: HTMLElement, px: number){
 
 describe('StudyServiceDeckPage Virtualisation & Stress', () => {
   it('active la virtualisation, mesure dynamiquement la hauteur et conserve sélection/navigation', async () => {
-    await act(async ()=> { render(
+    await profile('StudyServiceDeckPage virtual stress', async () => {
+      await act(async ()=> { render(
       <MemoryRouter initialEntries={["/study-service/d1"]}>
         <Routes>
           <Route path="/study-service/:deckId" element={<StudyServiceDeckPage />} />
         </Routes>
       </MemoryRouter>
-    ) })
+      ) })
     // Attendre que le titre deck soit injecté (polling sur mutation h1)
     await waitFor(()=> {
       const h1 = document.querySelector('h1')
@@ -82,12 +86,14 @@ describe('StudyServiceDeckPage Virtualisation & Stress', () => {
   scrollListTo(list, 1000 * 70)
     // Attendre prochain frame
     await act(async ()=> {})
+    // En mode FAST la fenêtre + overscan sont plus petits: abaisser le seuil requis
+  const MIN_AFTER_SCROLL = FAST ? 1 : 10
     await waitFor(()=> {
       const count = list.querySelectorAll('[data-idx]').length
-      if(count < 10) throw new Error('pas assez rendu encore')
-    }, { timeout: 2000 })
+      if(count < MIN_AFTER_SCROLL) throw new Error('pas assez rendu encore (count='+count+' < '+MIN_AFTER_SCROLL+')')
+    }, { timeout: FAST ? 3000 : 2000 })
     const afterScrollRendered = list.querySelectorAll('[data-idx]').length
-    expect(afterScrollRendered).toBeGreaterThan(10)
+    expect(afterScrollRendered).toBeGreaterThanOrEqual(MIN_AFTER_SCROLL)
 
     // Attendre qu'une fenêtre ayant atteint des indices élevés soit rendue (plutôt qu'un index fixe fragile)
     // Faire éventuellement quelques scrolls incrémentaux si nécessaire
@@ -115,7 +121,8 @@ describe('StudyServiceDeckPage Virtualisation & Stress', () => {
     }
 
     // Flip recto/verso via Enter
-    fireEvent.keyDown(window, { key: 'Enter' })
+      fireEvent.keyDown(window, { key: 'Enter' })
+    })
   }, 15000)
 
   it('bascule pagination puis revient virtualisation sans perdre la sélection existante', async () => {

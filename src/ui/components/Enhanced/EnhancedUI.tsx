@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { getFluidTransitionMastery, FluidTransitionMastery } from '../../../core/FluidTransitionMastery'
-import { useGamification } from '../Gamification/GamificationSystem'
+import { useGamification } from '../Gamification/useGamification.ts'
 
 interface MicroInteractionProps {
   children: React.ReactNode
@@ -634,11 +634,5 @@ export const ParticleEffect: React.FC<ParticleEffectProps> = ({
 }
 
 // Composant principal EnhancedUI qui combine tous les éléments
-export const EnhancedUI = {
-  MicroInteraction,
-  GlowButton,
-  MorphingCard,
-  LiquidProgress,
-  FloatingElement,
-  ParticleEffect
-}
+// Note: l'objet EnhancedUI (namespace) a été déplacé dans EnhancedUILib.ts
+// pour éviter d'exporter des valeurs non‑composants depuis ce fichier.

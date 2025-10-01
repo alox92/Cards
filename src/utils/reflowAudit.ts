@@ -9,7 +9,7 @@ interface ReflowEvent { t: number; phase: 'read' | 'write'; note?: string }
 class ReflowAuditor {
   private events: ReflowEvent[] = []
   private enabled = false
-  private flushTimer: any = 0
+  private flushTimer: number | null = null
   private lastFlush = Date.now()
 
   enable(){
@@ -21,7 +21,15 @@ class ReflowAuditor {
   disable(){
     if(!this.enabled) return
     this.enabled = false
+    this.cleanup()
     logger.info('ReflowAudit','Désactivé')
+  }
+
+  cleanup(){
+    if(this.flushTimer !== null){
+      clearTimeout(this.flushTimer)
+      this.flushTimer = null
+    }
   }
 
   markRead(note?: string){ if(this.enabled) this._push('read', note) }
@@ -29,8 +37,8 @@ class ReflowAuditor {
 
   private _push(phase: 'read'|'write', note?: string){
     this.events.push({ t: performance.now(), phase, note })
-    if(!this.flushTimer){
-      this.flushTimer = setTimeout(()=>{ this.flush(); this.flushTimer = 0 }, 4000)
+    if(this.flushTimer === null){
+      this.flushTimer = window.setTimeout(()=>{ this.flush(); this.flushTimer = null }, 4000)
     }
     if(this.events.length > 200){ this.flush() }
   }

@@ -17,6 +17,11 @@ Toutes les évolutions notables du projet. Format inspiré de Keep a Changelog.
 - Extension CardEntity: cardType, clozeMap, occlusionRegions
 - Services ajoutés: SearchService, HeatmapStatsService
 - Tests unitaires: clozeParser, SRS leech/bury, search, heatmap
+### Modifié
+- Interface principale modernisée : barre "Command Center" en verre fluide (stats, actions rapides, recherche) + transitions `framer-motion` harmonisées.
+- `RouteTransitionLayer` : animations plus douces, support `prefers-reduced-motion`, barre de chargement autonome.
+- Application des palettes thème/accent déléguée aux tâches inactives (`scheduleIdle`) pour réduire les pics de rendu.
+- Widget de statistiques globales enrichi (KPI supplémentaires, skeleton, rafraîchissement manuel, intégration focus-mode).
 
 ## [1.1.0] - 2025-08-11
 ### Ajouté

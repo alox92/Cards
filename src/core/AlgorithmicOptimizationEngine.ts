@@ -17,7 +17,7 @@ export interface AlgorithmConfig {
 export interface WorkerTask {
   id: string
   type: AlgorithmType
-  data: any
+  data: unknown
   priority: number
   timestamp: number
   estimatedDuration: number
@@ -50,14 +50,14 @@ export interface DifficultyAnalysis {
   confidence: number
 }
 
-export interface AlgorithmResult<T = any> {
+export interface AlgorithmResult<T = unknown> {
   taskId: string
   success: boolean
   result: T
   executionTime: number
   workerUsed: boolean
   cacheHit: boolean
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface PerformanceMetrics {
@@ -83,7 +83,7 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
   private workers = new Map<string, Worker>()
   private taskQueue: WorkerTask[] = []
   private activeTasks = new Map<string, WorkerTask>()
-  private resultCache = new Map<string, any>()
+  private resultCache = new Map<string, unknown>()
   
   private metrics: PerformanceMetrics = {
     totalTasks: 0,
@@ -520,8 +520,14 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
   /**
    * Gère les messages des workers
    */
-  private handleWorkerMessage(_workerId: string, message: any): void {
-    const { taskId, success, result, executionTime, error } = message
+  private handleWorkerMessage(_workerId: string, message: unknown): void {
+    const { taskId, success, result, executionTime, error } = message as { 
+      taskId: string; 
+      success: boolean; 
+      result: unknown; 
+      executionTime: number; 
+      error?: Error 
+    }
     const task = this.activeTasks.get(taskId)
     
     if (!task) return
@@ -598,7 +604,7 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
   /**
    * Génère une clé de cache
    */
-  private generateCacheKey(type: AlgorithmType, data: any): string {
+  private generateCacheKey(type: AlgorithmType, data: unknown): string {
     return `${type}-${JSON.stringify(data).substring(0, 100)}`
   }
 
@@ -626,7 +632,7 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
    */
   public async executeTask<T>(
     type: AlgorithmType, 
-    data: any, 
+    data: unknown, 
     options: { priority?: number; useCache?: boolean } = {}
   ): Promise<AlgorithmResult<T>> {
     const taskId = Math.random().toString(36).substring(2)
@@ -637,12 +643,12 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
       const cacheKey = this.generateCacheKey(type, data)
       const cached = this.resultCache.get(cacheKey)
       
-      if (cached) {
+      if (cached !== undefined) {
         this.updateCacheHitRate(true)
         return {
           taskId,
           success: true,
-          result: cached,
+          result: cached as T,
           executionTime: performance.now() - startTime,
           workerUsed: false,
           cacheHit: true
@@ -721,7 +727,7 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
       // Implémentation simplifiée pour fallback
       switch (task.type) {
         case 'spaced-repetition':
-          result = this.calculateSpacedRepetitionSync(task.data) as T
+          result = this.calculateSpacedRepetitionSync(task.data as SpacedRepetitionData) as T
           break
         case 'sorting':
           result = this.optimizedSortSync(task.data) as T
@@ -779,17 +785,27 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
   /**
    * Tri optimisé synchrone (fallback)
    */
-  private optimizedSortSync(data: any): any[] {
-    const { array, key, order = 'asc' } = data
+  private optimizedSortSync(data: unknown): unknown[] {
+    const { array, key, order = 'asc' } = data as { array: unknown[]; key?: string; order?: 'asc' | 'desc' }
     
     return [...array].sort((a, b) => {
-      const aVal = key ? a[key] : a
-      const bVal = key ? b[key] : b
+      const aVal = key ? (a as Record<string, unknown>)[key] : a
+      const bVal = key ? (b as Record<string, unknown>)[key] : b
       
+      // Safe comparison for unknown types
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return order === 'asc' ? aVal - bVal : bVal - aVal
+      }
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return order === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+      }
+      // Fallback: convert to string for comparison
+      const aStr = String(aVal)
+      const bStr = String(bVal)
       if (order === 'asc') {
-        return aVal < bVal ? -1 : aVal > bVal ? 1 : 0
+        return aStr < bStr ? -1 : aStr > bStr ? 1 : 0
       } else {
-        return aVal > bVal ? -1 : aVal < bVal ? 1 : 0
+        return aStr > bStr ? -1 : aStr < bStr ? 1 : 0
       }
     })
   }
@@ -797,8 +813,8 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
   /**
    * Calculs statistiques synchrones (fallback)
    */
-  private calculateStatisticsSync(data: any): any {
-    const { values } = data
+  private calculateStatisticsSync(data: unknown): { count: number; sum: number; mean: number; min: number; max: number; median: number } | { error: string } {
+    const { values } = data as { values?: number[] }
     
     if (!values || values.length === 0) {
       return { error: 'Pas de données' }
@@ -855,16 +871,16 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
   /**
    * Estime la durée d'une tâche
    */
-  private estimateTaskDuration(type: AlgorithmType, data: any): number {
+  private estimateTaskDuration(type: AlgorithmType, data: unknown): number {
     // Estimations basées sur le type et la taille des données
     switch (type) {
       case 'spaced-repetition':
         return 10 // 10ms
       case 'sorting':
-        const size = data.array?.length || 0
+        const size = (data as { array?: unknown[] }).array?.length || 0
         return Math.max(10, size * 0.1) // ~0.1ms par élément
       case 'statistics':
-        const count = data.values?.length || 0
+        const count = (data as { values?: number[] }).values?.length || 0
         return Math.max(5, count * 0.05) // ~0.05ms par valeur
       default:
         return 50 // 50ms par défaut

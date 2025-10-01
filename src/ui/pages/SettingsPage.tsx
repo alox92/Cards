@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useTheme } from '@/ui/hooks/useTheme'
-import { useFeedback } from '@/ui/components/feedback/FeedbackCenter'
+import { useFeedback } from '@/ui/components/feedback/useFeedback'
 import { useSettingsStore } from '@/data/stores/settingsStore'
-import { GlowButton } from '@/ui/components/Enhanced/EnhancedUI'
+import { GlowButton } from '@/ui/components/Enhanced/EnhancedUILib'
+import { logger } from '@/utils/logger'
 
 interface SettingsSection {
   id: string
@@ -42,7 +43,7 @@ const SettingsPage = () => {
   }
 
   const handleSave = () => {
-    console.log('Paramètres sauvegardés !')
+    logger.info('SettingsPage', 'Paramètres sauvegardés')
   }
 
   const handleReset = () => {

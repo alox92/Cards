@@ -9,13 +9,44 @@ import { initializeDemoDataServices } from '@/data/demoData'
 import { InitializationGate } from '@/app/InitializationGate'
 import { AppShell } from '@/app/AppShell'
 import { RoutesContainer } from '@/app/RoutesContainer'
+import { PerformanceOptimizer } from '@/utils/performanceOptimizer'
+
+const THEME_PRESET_PALETTES = {
+  solarized: { '--accent-color': '#268bd2', '--accent-700': '#0f4b66', '--bg-base': '#fdf6e3', '--bg-alt': '#eee8d5', '--text-base': '#073642' },
+  nord: { '--accent-color': '#88c0d0', '--accent-700': '#40616e', '--bg-base': '#2e3440', '--bg-alt': '#3b4252', '--text-base': '#eceff4' },
+  dracula: { '--accent-color': '#bd93f9', '--accent-700': '#6d4ca8', '--bg-base': '#282a36', '--bg-alt': '#343746', '--text-base': '#f8f8f2' },
+  gruvbox: { '--accent-color': '#fabd2f', '--accent-700': '#b57614', '--bg-base': '#282828', '--bg-alt': '#3c3836', '--text-base': '#ebdbb2' }
+} as const
+
+type ThemePresetKey = keyof typeof THEME_PRESET_PALETTES
+
+const THEME_PRESET_VARIABLES = Array.from(
+  new Set(
+    Object.values(THEME_PRESET_PALETTES).flatMap(Object.keys)
+  )
+)
 
 function App(){
   const { theme, toggleTheme } = useTheme()
   const { loadSettings, settings } = useSettingsStore()
   useApplyDynamicUISettings()
-  useEffect(()=>{ applyAccentPalette(settings.accentColor || '#3b82f6') }, [settings.accentColor])
-  useEffect(()=>{ const root = document.documentElement; const preset = settings.themePreset; if(!preset) return; const palettes: Record<string, Record<string,string>> = { solarized: { '--accent-color':'#268bd2','--accent-700':'#0f4b66','--bg-base':'#fdf6e3','--bg-alt':'#eee8d5','--text-base':'#073642' }, nord: { '--accent-color':'#88c0d0','--accent-700':'#40616e','--bg-base':'#2e3440','--bg-alt':'#3b4252','--text-base':'#eceff4' }, dracula: { '--accent-color':'#bd93f9','--accent-700':'#6d4ca8','--bg-base':'#282a36','--bg-alt':'#343746','--text-base':'#f8f8f2' }, gruvbox: { '--accent-color':'#fabd2f','--accent-700':'#b57614','--bg-base':'#282828','--bg-alt':'#3c3836','--text-base':'#ebdbb2' } }; const p = palettes[preset]; if(p){ Object.entries(p).forEach(([k,v])=> root.style.setProperty(k,v)) } }, [settings.themePreset])
+  useEffect(()=>{
+    const accent = settings.accentColor || '#3b82f6'
+    PerformanceOptimizer.scheduleIdle(() => { applyAccentPalette(accent) }, 80)
+  }, [settings.accentColor])
+
+  useEffect(() => {
+    const presetKey = settings.themePreset as ThemePresetKey | undefined
+    const root = document.documentElement
+    PerformanceOptimizer.scheduleIdle(() => {
+      THEME_PRESET_VARIABLES.forEach(variable => root.style.removeProperty(variable))
+      if (presetKey && THEME_PRESET_PALETTES[presetKey]) {
+        Object.entries(THEME_PRESET_PALETTES[presetKey]).forEach(([cssVar, value]) => {
+          root.style.setProperty(cssVar, value)
+        })
+      }
+    }, 120)
+  }, [settings.themePreset])
 
   return (
     <FeedbackCenterProvider>

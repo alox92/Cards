@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import FuturisticLayout from '@/ui/components/layout/FuturisticLayout'
 import { motion } from 'framer-motion'
-import { useFeedback } from '@/ui/components/feedback/FeedbackCenter'
+import { useFeedback } from '@/ui/components/feedback/useFeedback'
 import ParticleBurst from '@/ui/components/effects/ParticleBurst'
 // import { FlashCard } from '../components/Card/FlashCard'
 // LEGACY NOTE: utilisation stores remplacée progressivement par services

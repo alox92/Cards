@@ -60,6 +60,11 @@ export const PerformanceDiagnosticsPanel: React.FC = () => {
   const [vitals, setVitals] = useState<any[]>([])
   const [idleTasks, setIdleTasks] = useState<any[]>([])
   const [vitalsAgg, setVitalsAgg] = useState<{ name:string; p75:number; median:number; count:number }[]>([])
+  const [vitalsHi, setVitalsHi] = useState<{ name:string; p95:number; p99:number }[]>([])
+  const [vitalsHist, setVitalsHist] = useState<{ name:string; buckets: { b:number; c:number }[] }[]>([])
+  const [ringLogs, setRingLogs] = useState<any[]>([])
+  const [schedulerInfo, setSchedulerInfo] = useState<any>(null)
+  const [searchLatencyStats, setSearchLatencyStats] = useState<any>(null)
   // Simple polling of top search terms (dev only)
   useEffect(()=>{
     let mounted = true
@@ -114,7 +119,7 @@ export const PerformanceDiagnosticsPanel: React.FC = () => {
     const id = setInterval(()=>{
   setState(s => ({ ...s, fps: monitor.getStats() as any, suppressed: logger.getSuppressionSummary() }))
       // Pull web vitals + idle task history (non réactif sinon)
-      try {
+  try {
         const w: any = window as any
         const latestObj = w.__WEB_VITALS__ || {}
         const history: any[] = w.__WEB_VITALS_HISTORY__ || []
@@ -130,11 +135,36 @@ export const PerformanceDiagnosticsPanel: React.FC = () => {
           return { name, median: Math.round(median), p75: Math.round(p75), count: arr.length }
         })
         setVitalsAgg(agg)
+        // High percentiles sur même série si assez d'échantillons
+        const hi = Object.entries(by).map(([name, arr])=>{
+          if(arr.length < 10) return { name, p95: 0, p99: 0 }
+          const sorted = [...arr].sort((a,b)=> a-b)
+          const p95 = sorted[Math.min(sorted.length-1, Math.floor(sorted.length*0.95))]
+          const p99 = sorted[Math.min(sorted.length-1, Math.floor(sorted.length*0.99))]
+          return { name, p95: Math.round(p95), p99: Math.round(p99) }
+        })
+        setVitalsHi(hi)
+        // Histogrammes (par metric) -> tri des buckets croissants
+        try {
+          const histStore = w.__WEB_VITALS_HISTOGRAM__ || {}
+          const histArr = Object.entries(histStore).map(([name, buckets]: any)=>{
+            const list = Object.entries(buckets).map(([b,c]: any)=> ({ b: Number(b), c: c as number })).sort((a,b)=> a.b - b.b)
+            return { name, buckets: list }
+          })
+          setVitalsHist(histArr)
+        } catch {/* ignore */}
       } catch {/* ignore */}
       try {
         const it = (window as any).__IDLE_TASKS__
         if(Array.isArray(it)) setIdleTasks(it.slice(-15))
       } catch {}
+      try {
+        // Ring buffer logs (échantillon des derniers 25)
+        const snap = (logger as any).getRingSnapshot?.() || []
+        setRingLogs(snap.slice(-25))
+      } catch {/* ignore */}
+  try { const sched = (window as any).__PERF_SCHED__; if(sched) setSchedulerInfo(sched) } catch {/* ignore */}
+  try { const ss = (window as any).__SEARCH_DURS_STATS__; if(ss) setSearchLatencyStats(ss) } catch {/* ignore */}
     }, 1500)
     return () => clearInterval(id)
   }, [monitor])
@@ -189,6 +219,20 @@ export const PerformanceDiagnosticsPanel: React.FC = () => {
             <div><div className="text-gray-400">LOW</div><div className="text-red-400 font-semibold">{state.fps.consecutiveLow}</div></div>
             <div><div className="text-gray-400">ADAPT</div><div className="text-blue-400 font-semibold">{state.fps.adaptiveApplied}</div></div>
           </div>
+          {schedulerInfo && (
+            <div className="grid grid-cols-4 gap-1 text-center text-[9px] mt-1">
+              <div><div className="text-gray-500">Q-C</div><div className="text-white font-semibold">{schedulerInfo.queues?.critical}</div></div>
+              <div><div className="text-gray-500">Q-H</div><div className="text-white font-semibold">{schedulerInfo.queues?.high}</div></div>
+              <div><div className="text-gray-500">Q-N</div><div className="text-white font-semibold">{schedulerInfo.queues?.normal}</div></div>
+              <div><div className="text-gray-500">Q-B</div><div className="text-white font-semibold">{schedulerInfo.queues?.background}</div></div>
+              <div className="col-span-4 flex justify-between text-[9px] text-gray-400">
+                <span>P95:{Math.round(schedulerInfo.fpsP95||0)}</span>
+                <span>P99:{Math.round(schedulerInfo.fpsP99||0)}</span>
+                <span>Exec:{schedulerInfo.stats?.executed}</span>
+                <span>Last:{Math.round(schedulerInfo.stats?.lastExecDur||0)}ms</span>
+              </div>
+            </div>
+          )}
           {metrics && (
             <div className="grid grid-cols-3 gap-2 text-center text-[10px] border-t border-gray-700 pt-2">
               <div><div className="text-gray-400">Req</div><div className="text-white font-semibold">{metrics.pendingRequests}</div></div>
@@ -394,8 +438,43 @@ export const PerformanceDiagnosticsPanel: React.FC = () => {
                       <span className="text-teal-300">Med:{a.median}</span>
                     </div>
                   ))}
+                  {vitalsHi.length>0 && vitalsHi.map(h=> (
+                    <div key={h.name+':hi'} className="flex justify-between text-[9px] text-gray-500">
+                      <span className="truncate max-w-[80px]">{h.name}</span>
+                      <span className="text-orange-400">P95:{h.p95}</span>
+                      <span className="text-pink-400">P99:{h.p99}</span>
+                    </div>
+                  ))}
+                  {vitalsHist.length>0 && vitalsHist.map(h=> (
+                    <div key={h.name+':hist'} className="text-[8px] text-gray-500 flex items-center gap-1">
+                      <span className="truncate max-w-[50px]">{h.name}</span>
+                      <span className="flex-1 flex gap-0.5 items-end">
+                        {h.buckets.slice(0,10).map(b=>{
+                          const max = Math.max(...h.buckets.map(x=> x.c),1)
+                          const height = Math.round((b.c/max)*14)+1
+                          return <span key={b.b} title={`${b.b} (${b.c})`} style={{height}} className="w-1 bg-gray-600 inline-block"></span>
+                        })}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
+            </div>
+          )}
+      {searchLatencyStats && (
+            <div className="border-t border-gray-700 pt-1">
+              <div className="text-[10px] text-gray-300 font-semibold mb-0.5">Search Latency</div>
+              <div className="grid grid-cols-4 text-center text-[9px] mb-1">
+        <div><div className="text-gray-500">N</div><div className="text-white">{searchLatencyStats.count}</div></div>
+        <div><div className="text-gray-500">P50</div><div className="text-white">{Math.round(searchLatencyStats.p50)}</div></div>
+        <div><div className="text-gray-500">P95</div><div className="text-orange-400">{Math.round(searchLatencyStats.p95)}</div></div>
+        <div><div className="text-gray-500">P99</div><div className="text-pink-400">{Math.round(searchLatencyStats.p99)}</div></div>
+              </div>
+              <div className="flex items-end gap-0.5 h-4">
+        {Object.entries(searchLatencyStats.hist).sort((a:any,b:any)=> Number(a[0])-Number(b[0])).slice(0,12).map(([b,c]:any)=>(
+                  <div key={b} title={`${b}ms : ${c}`} style={{height: Math.max(2, Math.min(16, c*2))}} className="w-1 bg-gray-600"></div>
+                ))}
+              </div>
             </div>
           )}
           {idleTasks.length > 0 && (
@@ -430,6 +509,40 @@ export const PerformanceDiagnosticsPanel: React.FC = () => {
             <span>{state.fps.samples} samples</span>
             <span>Batch:{(logger as any).batchingEnabled ? 'on':'off'}</span>
             <span>Cat:{(logger as any).batchConfig?.categories?.size}</span>
+            <button
+              onClick={()=>{
+                try {
+                  const snapshot = {
+                    ts: Date.now(), metrics, fps: state.fps, scheduler: schedulerInfo,
+                    vitals, vitalsAgg, vitalsHi,
+                    ring: ringLogs.map((l:any)=> ({ t: l.timestamp, lvl: l.level, cat: l.category, msg: l.message })),
+                    suppressed: state.suppressed,
+                    search: searchLatencyStats
+                  }
+                  const blob = new Blob([JSON.stringify(snapshot,null,2)], { type: 'application/json' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url; a.download = 'perf-snapshot.json'; a.click()
+                  setTimeout(()=> URL.revokeObjectURL(url), 4000)
+                } catch {/* ignore */}
+              }}
+              className="px-1 py-0.5 bg-sky-700/60 hover:bg-sky-700 rounded text-[9px]"
+            >Export</button>
+            <button
+              onClick={()=>{
+                try {
+                  const w:any = window as any
+                  const snapshot = {
+                    ts: Date.now(), metrics, fps: state.fps, scheduler: schedulerInfo,
+                    vitals, vitalsAgg, vitalsHi, search: searchLatencyStats
+                  }
+                  const arr = (w.__PERF_EXPORTS__ ||= [])
+                  arr.push(snapshot)
+                  logger.debug('PerformanceDiagnosticsPanel', 'Perf snapshot uploaded (debug array)', { count: arr.length, last: snapshot })
+                } catch {/* ignore */}
+              }}
+              className="px-1 py-0.5 bg-emerald-700/60 hover:bg-emerald-700 rounded text-[9px]"
+            >Upload</button>
           </div>
           <div>
             <h4 className="text-[11px] font-semibold mt-2 mb-1">Logs supprimés</h4>
@@ -440,6 +553,19 @@ export const PerformanceDiagnosticsPanel: React.FC = () => {
                 <span className="text-yellow-400">{s.suppressed}</span>
               </div>
             ))}
+            {ringLogs.length>0 && (
+              <div className="mt-2 border-t border-gray-700 pt-1">
+                <div className="text-[10px] text-gray-300 font-semibold mb-0.5">Derniers Logs (ring)</div>
+                <div className="max-h-24 overflow-auto space-y-0.5">
+                  {ringLogs.slice(-12).reverse().map((l:any,i)=>(
+                    <div key={i} className="text-[9px] flex gap-1">
+                      <span className="text-gray-500">{(l.level??'').toString().slice(0,1)}</span>
+                      <span className="truncate flex-1">{l.category}:{l.message}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <div className="text-[10px] text-gray-500">Panel expérimental – gouverné par feature flag.</div>
         </div>

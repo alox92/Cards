@@ -19,8 +19,9 @@ describe('SRS leech detection', () => {
   const due2 = makeCard('b'); due2.nextReview = Date.now()-1000
     // bury due2
     srs.bury([due2.id])
-    const queue = srs.getStudyQueue([due1, due2] as any, 'd1', 10)
-    expect(queue.find(c=>c.id==='b')).toBeUndefined()
-    expect(queue.find(c=>c.id==='a')).toBeDefined()
+  const queueResult = srs.getStudyQueue([due1, due2] as any, 'd1', 10)
+  const queue = queueResult.ok ? queueResult.value : []
+  expect(queue.find((c:any)=>c.id==='b')).toBeUndefined()
+  expect(queue.find((c:any)=>c.id==='a')).toBeDefined()
   })
 })

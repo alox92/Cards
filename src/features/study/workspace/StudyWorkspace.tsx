@@ -6,6 +6,8 @@ import useDeckDerivedStats from '@/ui/hooks/useDeckDerivedStats'
 import useServiceStudySession from '@/ui/hooks/useServiceStudySession'
 import { useLocation } from 'react-router-dom'
 import CardCreateDrawer from '@/ui/components/cards/CardCreateDrawer'
+import { sanitizeHtml } from '@/utils/sanitize'
+import { isFeatureEnabled } from '@/config/featureFlags'
 
 // Session orchestrator hook remplacé par useServiceStudySession (logique réelle)
 
@@ -50,15 +52,23 @@ export const StudyWorkspace = () => {
 
   const spaceDownAt = useRef<number|null>(null)
   const spaceLongTriggered = useRef(false)
+  const revealedAtKeyDown = useRef(false)
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if(!session.currentCard || session.finished) return
+    // Ne pas intercepter si focus est sur un champ editable
+    const tgt = e.target as HTMLElement | null
+    if(tgt && (tgt.isContentEditable || ['INPUT','TEXTAREA','SELECT'].includes(tgt.tagName))) return
     if(['Space','ArrowLeft','ArrowRight','ArrowUp','KeyF','Escape'].includes(e.code)) e.preventDefault()
   if(e.code==='KeyF'){ setFocusMode(f=>{ const v=!f; try { localStorage.setItem('cards.pref.autoFocusStudy', v? '1':'0') } catch{}; return v }); return }
     if(e.code==='Escape' && focusMode){ setFocusMode(false); return }
     if(e.code==='Space') {
+      if((e as any).repeat) return // éviter répétitions auto
       if(spaceDownAt.current==null){ spaceDownAt.current = Date.now(); spaceLongTriggered.current=false }
-      if(!revealed) setRevealed(true)
+      revealedAtKeyDown.current = revealed
+      // Première pression: si pas révélé => révéler et PERSISTER (ne rien faire au keyup)
+      if(!revealed){ setRevealed(true); return }
+      // Si déjà révélé: on évaluera à keyup (tap courte = refermer, longue = noter "Bien")
       return
     }
     if(e.code==='ArrowRight'){
@@ -77,12 +87,15 @@ export const StudyWorkspace = () => {
     if(e.code==='Space'){
       const down = spaceDownAt.current; const dur = down? Date.now()-down:0
       spaceDownAt.current = null
-      if(revealed && !spaceLongTriggered.current){
+      // Ne réagir que si la carte était DÉJÀ révélée au moment du keydown
+      if(revealedAtKeyDown.current && !spaceLongTriggered.current){
         if(dur>550){ spaceLongTriggered.current=true; feedback(3); void session.answer(3); setRevealed(false) }
         else { setRevealed(false) }
       }
+      // reset flag
+      revealedAtKeyDown.current = false
     }
-  }, [revealed, feedback, session])
+  }, [feedback, session])
 
   useEffect(()=>{ window.addEventListener('keydown', handleKeyDown); window.addEventListener('keyup', handleKeyUp); return ()=> { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp) } }, [handleKeyDown, handleKeyUp])
 
@@ -119,7 +132,7 @@ export const StudyWorkspace = () => {
         </aside>
         {/* Zone centrale carte */}
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
-          <motion.div layoutId={activeDeck ? `deck-${activeDeck}`: undefined} layout className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-sm min-h-[240px] flex flex-col items-center justify-center text-gray-500 text-sm relative">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-sm min-h-[240px] flex flex-col items-center justify-center text-gray-500 text-sm relative">
             {!activeDeck && <p className="mt-2 text-xs text-gray-400">Sélectionnez un deck pour commencer.</p>}
             {activeDeck && (
               <div className="text-center space-y-2">
@@ -142,7 +155,11 @@ export const StudyWorkspace = () => {
                       <button disabled={session.answering} onClick={()=>{ feedback(3); void session.answer(3); setRevealed(false) }} className="px-3 py-1.5 rounded-md bg-blue-600 text-white text-xs hover:bg-blue-500 disabled:opacity-40 transition" title="→ après flip / Space long">Bien</button>
                       <button disabled={session.answering} onClick={()=>{ feedback(1); void session.answer(1); setRevealed(false) }} className="px-3 py-1.5 rounded-md bg-amber-600 text-white text-xs hover:bg-amber-500 disabled:opacity-40 transition" title="← après flip">Difficile</button>
                     </div>
-                    <div className="text-[10px] text-gray-400">Space: flip (long &gt;550ms = Bien) · ↑ Facile · ← Difficile · → Bien · F Focus</div>
+                    <div className="text-[10px] text-gray-400 flex items-center gap-2">
+                      <span>Space: flip (long &gt;550ms = Bien) · ↑ Facile · ← Difficile · → Bien · F Focus</span>
+                      <span className="opacity-60">·</span>
+                      <Toggle3DCompat />
+                    </div>
                   </div>
                 )}
                 {session.finished && (
@@ -150,7 +167,7 @@ export const StudyWorkspace = () => {
                 )}
               </div>
             )}
-          </motion.div>
+          </div>
           {showPreview && (
             <motion.div layout className="grid lg:grid-cols-3 gap-4">
               {session.finished && (
@@ -211,18 +228,98 @@ export default StudyWorkspace
 
 // Carte flip 3D contrôlée par revealed
 const FlipStudyCard = ({ front, back, revealed, onToggle, focus }: { front:string; back:string; revealed:boolean; onToggle:()=>void; focus?:boolean }) => {
+  const allowHtml = isFeatureEnabled('richTextEditor')
+  const [supports3D, setSupports3D] = useState(true)
+  useEffect(() => {
+    try {
+      const css = (window as any).CSS
+      const base = css && typeof css.supports === 'function'
+      const ok = base
+        ? css.supports('transform-style', 'preserve-3d') && css.supports('backface-visibility', 'hidden') && css.supports('transform', 'rotateY(180deg)')
+        : ('webkitBackfaceVisibility' in (document.body.style as any))
+      const forcedOff = localStorage.getItem('cards.pref.disable3D') === '1'
+      setSupports3D(Boolean(ok) && !forcedOff)
+    } catch { setSupports3D(true) }
+  }, [])
+  const looksHtml = /<\w|&[a-z]+;|<br\s*\/>/i.test(front + back)
+  const renderHtml = allowHtml && looksHtml
   return (
-    <div className={"relative select-none " + (focus? 'w-[min(80vw,900px)] h-[420px] mx-auto':'w-72 h-44')} style={{ perspective:'1200px' }}>
-      <button onClick={onToggle} className="absolute inset-0 w-full h-full group [transform-style:preserve-3d] transition-transform duration-500 will-change-transform" style={{ transform: revealed? 'rotateY(180deg)':'rotateY(0deg)' }}>
-        <div className="absolute inset-0 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col items-center justify-center p-4 text-center text-sm font-medium text-gray-700 dark:text-gray-200 [backface-visibility:hidden] shadow-md group-active:scale-[.98]">
-          <div className={focus? 'text-lg leading-snug whitespace-pre-wrap break-words max-h-full overflow-y-auto custom-scroll':'line-clamp-5 leading-snug'}>{front}</div>
-          <div className="absolute bottom-2 right-2 text-[10px] text-gray-400">Espace ↺</div>
-        </div>
-        <div className="absolute inset-0 rounded-xl border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 flex flex-col items-center justify-center p-4 text-center text-sm font-medium text-indigo-800 dark:text-indigo-200 [backface-visibility:hidden] shadow-md rotate-y-180">
-          <div className={focus? 'text-lg leading-snug whitespace-pre-wrap break-words max-h-full overflow-y-auto custom-scroll':'line-clamp-5 leading-snug'}>{back}</div>
-          <div className="absolute bottom-2 right-2 text-[10px] text-indigo-400">← / →</div>
-        </div>
-      </button>
+    <div
+      className={"relative select-none " + (focus? 'w-[min(80vw,900px)] h-[420px] mx-auto':'w-72 h-44')}
+      style={{ perspective:'1200px', perspectiveOrigin: '50% 50%' }}
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onToggle}
+        onKeyDown={(e)=>{ if(e.key === 'Enter'){ e.preventDefault(); onToggle() } else if(e.key === ' '){ e.preventDefault() } }}
+        className={supports3D ? "absolute inset-0 w-full h-full group cursor-pointer [transform-style:preserve-3d] transition-transform duration-500 will-change-transform" : "absolute inset-0 w-full h-full group cursor-pointer"}
+        style={supports3D ? { transform: revealed? 'rotateY(180deg)':'rotateY(0deg)' } : undefined}
+        aria-label={revealed? 'Verso (cliquer pour revenir au recto)':'Recto (cliquer pour voir le verso)'}
+      >
+        {supports3D ? (
+          <>
+            <div className="absolute inset-0 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col items-center justify-center p-4 text-center text-sm font-medium text-gray-700 dark:text-gray-200 [backface-visibility:hidden] shadow-md group-active:scale-[.98]">
+              <div className={focus? 'text-lg leading-snug whitespace-pre-wrap break-words max-h-full overflow-y-auto custom-scroll':'line-clamp-5 leading-snug'}>
+                {renderHtml ? (
+                  <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(front) }} />
+                ) : front}
+              </div>
+              <div className="absolute bottom-2 right-2 text-[10px] text-gray-400">Espace ↺</div>
+            </div>
+            <div className="absolute inset-0 rounded-xl border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 flex flex-col items-center justify-center p-4 text-center text-sm font-medium text-indigo-800 dark:text-indigo-200 [backface-visibility:hidden] shadow-md" style={{ transform: 'rotateY(180deg)' }}>
+              <div className={focus? 'text-lg leading-snug whitespace-pre-wrap break-words max-h-full overflow-y-auto custom-scroll':'line-clamp-5 leading-snug'}>
+                {renderHtml ? (
+                  <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(back) }} />
+                ) : back}
+              </div>
+              <div className="absolute bottom-2 right-2 text-[10px] text-indigo-400">← / →</div>
+            </div>
+          </>
+        ) : (
+          // Fallback sans 3D: cross-fade entre recto/verso
+          <>
+            <div className={`absolute inset-0 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 flex flex-col items-center justify-center p-4 text-center text-sm font-medium text-gray-700 dark:text-gray-200 shadow-md transition-opacity duration-300 ${revealed ? 'opacity-0' : 'opacity-100'}`} style={{ pointerEvents: 'none' }}>
+              <div className={focus? 'text-lg leading-snug whitespace-pre-wrap break-words max-h-full overflow-y-auto custom-scroll':'line-clamp-5 leading-snug'}>
+                {renderHtml ? (
+                  <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(front) }} />
+                ) : front}
+              </div>
+              <div className="absolute bottom-2 right-2 text-[10px] text-gray-400">Espace ↺</div>
+            </div>
+            <div className={`absolute inset-0 rounded-xl border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 flex flex-col items-center justify-center p-4 text-center text-sm font-medium text-indigo-800 dark:text-indigo-200 shadow-md transition-opacity duration-300 ${revealed ? 'opacity-100' : 'opacity-0'}`} style={{ pointerEvents: 'none' }}>
+              <div className={focus? 'text-lg leading-snug whitespace-pre-wrap break-words max-h-full overflow-y-auto custom-scroll':'line-clamp-5 leading-snug'}>
+                {renderHtml ? (
+                  <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(back) }} />
+                ) : back}
+              </div>
+              <div className="absolute bottom-2 right-2 text-[10px] text-indigo-400">← / →</div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
+  )
+}
+
+// Petit bouton pour basculer le mode compatibilité 3D (fallback cross-fade)
+const Toggle3DCompat = () => {
+  const [disabled, setDisabled] = useState<boolean>(() => {
+    try { return localStorage.getItem('cards.pref.disable3D') === '1' } catch { return false }
+  })
+  const toggle = () => {
+    setDisabled(d => {
+      const nv = !d
+      try { localStorage.setItem('cards.pref.disable3D', nv ? '1' : '0') } catch {}
+      // Force un reload léger pour recalculer le support
+      setTimeout(()=>{ location.reload() }, 50)
+      return nv
+    })
+  }
+  return (
+    <button onClick={toggle} className="px-2 py-0.5 rounded border text-[10px] hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+      title={disabled? '3D désactivée (fallback) — cliquer pour réactiver' : '3D activée — cliquer pour désactiver si problème'}>
+      {disabled ? 'Mode compatibilité (3D off)' : '3D: on'}
+    </button>
   )
 }

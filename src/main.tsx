@@ -1,7 +1,9 @@
+import '@/shims/processShim'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
+import ErrorBoundary from '@/app/ErrorBoundary'
 import { logger } from '@/utils/logger'
 import './index.css'
 import '@/application/migrations/migrateDataUrlImagesToMedia'
@@ -39,8 +41,10 @@ const updateSW = registerSW({
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ServiceProvider>
-  <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <App />
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
       </BrowserRouter>
     </ServiceProvider>
   </React.StrictMode>
@@ -59,29 +63,27 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     reflowAuditor.enable()
   }
 
-  const mon = getFPSMonitor();
-  if(!(mon as any).running) mon.start()
-  setInterval(()=> logger.flushBatch(), 5000)
-
-  // Budget watcher (fps + mémoire)
-  const budget = PERFORMANCE_BUDGETS
-  setInterval(()=>{
-    // FPS check (utilise stats courants)
-    const stats = mon.getStats() as any
-    if(stats.avg && stats.avg < budget.fpsMinAcceptable){
-      logger.warn('PerformanceBudget','FPS en dessous du minimum', { avg: stats.avg, minAcceptable: budget.fpsMinAcceptable })
-    }
-    // Memory check si API disponible
-    const mem: any = (performance as any).memory
-    if(mem?.usedJSHeapSize){
-      const mb = mem.usedJSHeapSize / 1024 / 1024
-      if(mb > budget.memoryHardLimitMB){
-        logger.error('PerformanceBudget','Dépassement mémoire HARD', { usedMB: Math.round(mb), hard: budget.memoryHardLimitMB })
-      } else if(mb > budget.memorySoftLimitMB){
-        logger.warn('PerformanceBudget','Dépassement mémoire SOFT', { usedMB: Math.round(mb), soft: budget.memorySoftLimitMB })
+  if(FLAGS.diagnosticsEnabled){
+    const mon = getFPSMonitor();
+    if(!(mon as any).running) mon.start()
+    setInterval(()=> logger.flushBatch(), 5000)
+    const budget = PERFORMANCE_BUDGETS
+    setInterval(()=>{
+      const stats = mon.getStats() as any
+      if(stats.avg && stats.avg < budget.fpsMinAcceptable){
+        logger.warn('PerformanceBudget','FPS en dessous du minimum', { avg: stats.avg, minAcceptable: budget.fpsMinAcceptable })
       }
-    }
-  }, 6000)
+      const mem: any = (performance as any).memory
+      if(mem?.usedJSHeapSize){
+        const mb = mem.usedJSHeapSize / 1024 / 1024
+        if(mb > budget.memoryHardLimitMB){
+          logger.error('PerformanceBudget','Dépassement mémoire HARD', { usedMB: Math.round(mb), hard: budget.memoryHardLimitMB })
+        } else if(mb > budget.memorySoftLimitMB){
+          logger.warn('PerformanceBudget','Dépassement mémoire SOFT', { usedMB: Math.round(mb), soft: budget.memorySoftLimitMB })
+        }
+      }
+    }, 6000)
+  }
 
   // ===================== WARM-UP & IDLE TASKS (multi-cœur) =====================
   // Heuristique d'activité utilisateur pour priorisation adaptative
@@ -194,7 +196,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   }), 3400)
 
   // Web Vitals instrumentation (après warmups majeurs)
-  PerformanceOptimizer.scheduleIdle(guarded(()=> { try { reportWebVitals() } catch {} }), 3600)
+  if(FLAGS.diagnosticsEnabled){
+    PerformanceOptimizer.scheduleIdle(guarded(()=> { try { reportWebVitals() } catch {} }), 3600)
+  }
 
   // Prefetch dynamique de bundles critiques (si navigateur supporte priorityHint)
   PerformanceOptimizer.scheduleIdle(guarded(()=> {

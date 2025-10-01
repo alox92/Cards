@@ -52,6 +52,10 @@ export interface LoggerConfig {
 class CardsLogger {
   private config: LoggerConfig
   private logs: LogEntry[] = []
+  private ringBuffer: LogEntry[] = []
+  private ringCapacity = 500
+  private ringIndex = 0
+  private samplingConfig = { enabled: true, maxPerSecond: 120, currentSecond: 0, emittedThisSecond: 0 }
   private performanceMarks = new Map<string, number>()
   private sessionId: string
   private listeners = new Set<(entry: LogEntry)=>void>()
@@ -191,7 +195,7 @@ class CardsLogger {
     try {
       const recentLogs = this.logs.slice(-100) // Seulement les 100 derniers
       localStorage.setItem('cards_logs', JSON.stringify(recentLogs))
-    } catch (error) {
+    } catch (_error) {
       // Ignorer les erreurs de stockage
     }
 
@@ -209,6 +213,23 @@ class CardsLogger {
     context?: LogEntry['context']
   ): void {
     if (!this.shouldLog(level)) return
+
+    // Sampling simple: limite d'émissions par seconde pour éviter déluge
+    if(this.samplingConfig.enabled){
+      const sec = Math.floor(Date.now()/1000)
+      if(sec !== this.samplingConfig.currentSecond){
+        this.samplingConfig.currentSecond = sec
+        this.samplingConfig.emittedThisSecond = 0
+      }
+      if(this.samplingConfig.emittedThisSecond >= this.samplingConfig.maxPerSecond){
+        // Incrémente suppression sur clé globale sampling
+        const k = `SAMPLE|ALL|*`
+        const rec = this.lastLogMap.get(k) || { last: 0, suppressed: 0 }
+        rec.suppressed += 1; rec.last = Date.now(); this.lastLogMap.set(k, rec)
+        return
+      }
+      this.samplingConfig.emittedThisSecond++
+    }
 
     // Rate limiting (surtout pour DEBUG/WARN/ERROR répétitifs)
     if(this.config.enableRateLimit){
@@ -233,6 +254,14 @@ class CardsLogger {
     }
 
     const entry = this.createLogEntry(level, category, message, data, context)
+
+    // Ring buffer en parallèle (consultable par diagnostics sans prendre toutes les logs principales)
+    if(this.ringBuffer.length < this.ringCapacity){
+      this.ringBuffer.push(entry)
+    } else {
+      this.ringBuffer[this.ringIndex] = entry
+      this.ringIndex = (this.ringIndex + 1) % this.ringCapacity
+    }
 
     // Batching: uniquement INFO/DEBUG des catégories ciblées (pas d'erreurs critiques)
   if(this.batchingEnabled && this.batchConfig.categories.has(category) && level <= LogLevel.INFO){
@@ -428,6 +457,11 @@ class CardsLogger {
     for(const [k,v] of this.lastLogMap.entries()) if(v.suppressed) out.push({ key: k, suppressed: v.suppressed })
     return out.sort((a,b)=> b.suppressed - a.suppressed)
   }
+  getRingSnapshot(){
+    if(this.ringBuffer.length < this.ringCapacity) return [...this.ringBuffer]
+    // Retour ordonné chronologiquement (ring rotation)
+    return [...this.ringBuffer.slice(this.ringIndex), ...this.ringBuffer.slice(0, this.ringIndex)]
+  }
   resetSuppressionCounters(){
     for(const val of this.lastLogMap.values()) val.suppressed = 0
   }
@@ -451,19 +485,35 @@ class CardsLogger {
 
 // Instance globale du logger
 import { FLAGS } from '@/utils/featureFlags'
+
+// Parsing niveau de log via env (VITE_LOG_LEVEL=trace|debug|info|warn|error|critical)
+function parseLogLevel(raw?: string): LogLevel {
+  // Avoid accessing process.env in browser (undefined). Rely on import.meta.env only.
+  const isDev = !!(import.meta as any).env?.DEV
+  if(!raw) return isDev ? LogLevel.DEBUG : LogLevel.INFO
+  switch(raw.toLowerCase()){
+    case 'trace': return LogLevel.TRACE
+    case 'debug': return LogLevel.DEBUG
+    case 'info': return LogLevel.INFO
+    case 'warn': return LogLevel.WARN
+    case 'error': return LogLevel.ERROR
+    case 'critical': return LogLevel.CRITICAL
+    default: return LogLevel.INFO
+  }
+}
+const rawLevel = (import.meta as any).env?.VITE_LOG_LEVEL
+
 export const logger = new CardsLogger({
-  // Web-only: pas de détection Tauri, DEBUG en dev sinon INFO
-  minLevel: (process.env.NODE_ENV === 'development') ? LogLevel.DEBUG : LogLevel.INFO,
-  enablePerformanceTracking: true,
+  minLevel: parseLogLevel(rawLevel),
+  // Désactivation du tracking performance détaillé hors diagnostics
+  enablePerformanceTracking: !!FLAGS.diagnosticsEnabled,
   colors: true,
-  timestamp: true
-  ,captureStack: true
+  timestamp: true,
+  captureStack: true
 })
 
 // Application du flag batching (override du comportement DEV par défaut)
-if(!FLAGS.logBatchingEnabled) {
-  logger.setBatchingEnabled(false)
-}
+if(!FLAGS.logBatchingEnabled) { logger.setBatchingEnabled(false) }
 
 // Helper pour les erreurs avec types
 export function logError(category: string, error: Error | unknown, context?: any): void {

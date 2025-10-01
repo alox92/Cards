@@ -1,3 +1,19 @@
+## Migrations Dexie & Stratégie (v7)
+
+La base IndexedDB (Dexie) suit un versioning incrémental (actuel: v7). Chaque bump ajoute `this.version(x)` dans `AribaDB.ts` avec éventuellement une fonction `upgrade`.
+
+Objectifs v7:
+* Ajouter table `meta` (`key`) pour stocker `schemaVersion` et timestamp d'upgrade.
+* Préparer une future stratégie de sauvegarde / wipe contrôlé (export JSON avant reset complet si corruption détectée).
+
+Bonnes pratiques migrations:
+1. Ne jamais supprimer un index existant sans prévoir une transition (créer nouvelle table puis recopier, ensuite drop dans version ultérieure).
+2. Limiter la logique lourde dans `upgrade` (batchs chunkés, éviter blocage > 100ms).
+3. En cas d'échec non critique, capturer silencieusement (logger.debug) pour ne pas bloquer l'ouverture.
+4. Si wipe nécessaire: exporter données vitales (`cards`, `decks`, `media` métadata) vers `localStorage` clé `cards_backup_<timestamp>` puis vider tables.
+
+Helper futur potentiel (non implémenté encore): `exportDatabase()` pour sauver toutes les rows puis réimporter.
+
 # 🛠 Guide Développeur - Cards
 
 ## Architecture (Clean-ish)

@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react'
-import { EnhancedUI } from '../components/Enhanced/EnhancedUI'
+import { EnhancedUI } from '../components/Enhanced/EnhancedUILib'
 import { getFluidTransitionMastery, FluidTransitionMastery } from '../../core/FluidTransitionMastery'
 import { getIntelligentLearningSystem, IntelligentLearningSystem } from '../../core/IntelligentLearningSystem'
 

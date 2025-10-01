@@ -33,7 +33,7 @@ export class FPSMonitor {
 
   private quietUntil = 0
   constructor(opts: FPSMonitorOptions = {}){
-    const isDev = (import.meta as any).env?.DEV
+    const isDev = (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV
     const baseWarn = opts.warnBelow ?? (isDev ? 45 : 50)
     this.options = {
   intervalMs: opts.intervalMs ?? 3500,
@@ -48,20 +48,34 @@ export class FPSMonitor {
   }
 
   private loop = () => {
-    if(!this.running) return
-    const now = performance.now()
-    const delta = now - this.lastTime
-    if(delta > 0 && !this.paused){
-      const fps = 1000 / delta
-      this.frames.push(fps)
-      if(this.frames.length > this.options.sampleSize) this.frames.shift()
+    if(!this.running) {
+      // Guard: cancel animation frame si running=false
+      if(this.rafId) {
+        cancelAnimationFrame(this.rafId)
+        this.rafId = null
+      }
+      return
     }
-    this.lastTime = now
-    if((now - this.lastReport) >= this.options.intervalMs){
-      if(!this.paused) this.report()
-      this.lastReport = now
+    
+    try {
+      const now = performance.now()
+      const delta = now - this.lastTime
+      if(delta > 0 && !this.paused){
+        const fps = 1000 / delta
+        this.frames.push(fps)
+        if(this.frames.length > this.options.sampleSize) this.frames.shift()
+      }
+      this.lastTime = now
+      if((now - this.lastReport) >= this.options.intervalMs){
+        if(!this.paused) this.report()
+        this.lastReport = now
+      }
+      this.rafId = requestAnimationFrame(this.loop)
+    } catch (error) {
+      logger.error('FPS', 'Erreur dans loop FPS monitor', { error })
+      // Cleanup automatique en cas d'erreur
+      this.stop()
     }
-    this.rafId = requestAnimationFrame(this.loop)
   }
 
   private report(){
@@ -110,8 +124,11 @@ export class FPSMonitor {
   stop(){
     if(!this.running) return
     this.running = false
-    if(this.rafId) cancelAnimationFrame(this.rafId)
-    this.rafId = null
+    // Cleanup atomique: check strict pour éviter race condition
+    if(this.rafId !== null){
+      cancelAnimationFrame(this.rafId)
+      this.rafId = null
+    }
     logger.info('FPS','🛑 Surveillance FPS arrêtée')
   }
 

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { GlowButton } from '@/ui/components/Enhanced/EnhancedUI'
+import { GlowButton } from '@/ui/components/Enhanced/EnhancedUILib'
 
 const AdvancedStatsPage = () => {
   return (

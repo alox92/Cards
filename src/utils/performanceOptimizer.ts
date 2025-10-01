@@ -223,8 +223,8 @@ export const PERFORMANCE_STYLES = {
   }
 }
 
-// 🚀 Fonctions utilitaires pour performance
-export class PerformanceOptimizer {
+// 🚀 Fonctions utilitaires pour performance et scheduling
+export class AnimationScheduler {
   private static rafId: number | null = null
   private static idleSupported = typeof (globalThis as any).requestIdleCallback !== 'undefined'
   // Horodatage du dernier yield coopératif pour un contrôle budget fiable
@@ -406,6 +406,13 @@ export class PerformanceOptimizer {
    * Force la compilation des shaders pour les animations CSS
    */
   static warmupGPU(): void {
+    if (typeof document === 'undefined') {
+      return
+    }
+    const body = document.body
+    if (!body) {
+      return
+    }
     const warmupElement = document.createElement('div')
     warmupElement.style.cssText = `
       position: fixed;
@@ -420,16 +427,18 @@ export class PerformanceOptimizer {
       will-change: transform;
     `
     
-    document.body.appendChild(warmupElement)
+    body.appendChild(warmupElement)
     
     // Force le reflow pour initialiser le GPU
-    warmupElement.offsetHeight
+    void warmupElement.offsetHeight
     
     // Animation de warmup
     warmupElement.style.transform = 'translateZ(0) scale3d(1.01, 1.01, 1)'
     
     setTimeout(() => {
-      document.body.removeChild(warmupElement)
+      if (warmupElement.parentNode) {
+        warmupElement.parentNode.removeChild(warmupElement)
+      }
     }, 100)
   }
 }
@@ -440,7 +449,7 @@ export const useOptimizedAnimation = () => {
     variants: MOTION_VARIANTS,
     timing: TIMING_CONFIGS,
     styles: PERFORMANCE_STYLES,
-    utils: PerformanceOptimizer
+    scheduler: AnimationScheduler
   }
 }
 
@@ -449,6 +458,10 @@ export default {
   TIMING_CONFIGS,
   MOTION_VARIANTS,
   PERFORMANCE_STYLES,
-  PerformanceOptimizer,
+  AnimationScheduler,
   useOptimizedAnimation
 }
+
+// Alias pour rétrocompatibilité (deprecated)
+/** @deprecated Utilisez AnimationScheduler à la place */
+export const PerformanceOptimizer = AnimationScheduler
