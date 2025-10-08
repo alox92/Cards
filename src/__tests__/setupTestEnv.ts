@@ -1,5 +1,10 @@
 // Polyfill minimal browser APIs for Vitest in Node
 // (jsdom fourni via vitest.config.ts)
+
+// ================= IndexedDB Polyfill pour tests ==================
+// Utilisation de fake-indexeddb pour environnement de test complet
+import 'fake-indexeddb/auto'
+
 if (typeof globalThis.localStorage === 'undefined') {
   const store: Record<string,string> = {}
   globalThis.localStorage = {

@@ -3,6 +3,7 @@ import type { CardRepository } from '../../domain/repositories/CardRepository'
 import { DeckEntity, type DeckCreationData } from '../../domain/entities/Deck'
 import type { CardEntity } from '../../domain/entities/Card'
 import { logger } from '@/utils/logger'
+import { processBatch } from '@/utils/batchProcessor'
 
 function svcError(code: string, message: string){ const e:any = new Error(message); e.code = code; return e }
 // Certains tests mockent logger en ne fournissant que error/debug -> safe wrapper pour warn
@@ -75,6 +76,13 @@ export class DeckService {
   }
   async deleteDeck(id: string): Promise<void> {
     if(!id){ safeWarn('DeckService','deleteDeck: ID requis'); throw svcError('DECK_DELETE_NO_ID','ID requis') }
+    
+    // Vérifier que le deck existe
+    const existing = await this.deckRepo.getById(id)
+    if (!existing) {
+      throw svcError('DECK_NOT_FOUND', 'Deck inexistant')
+    }
+    
     try { await this.deckRepo.delete(id); await this.cardRepo.deleteByDeck(id) } catch(e){
       logger.error('DeckService','Échec suppression deck', e)
       throw svcError('DECK_DELETE_FAILED','échec suppression deck')
@@ -86,6 +94,35 @@ export class DeckService {
       logger.error('DeckService','Erreur récupération cartes deck', e)
       throw svcError('DECK_LIST_CARDS_FAILED','échec list cards deck')
     }
+  }
+
+  /**
+   * Crée plusieurs decks en batch pour éviter surcharge IndexedDB
+   * 
+   * @param decksData - Tableau de données de decks à créer
+   * @param options - Options de batch (batchSize, onProgress)
+   * @returns Tableau de decks créés
+   */
+  async createMany(
+    decksData: DeckCreationData[],
+    options?: { batchSize?: number; onProgress?: (done: number, total: number) => void }
+  ): Promise<DeckEntity[]> {
+    if (!decksData || decksData.length === 0) return []
+
+    logger.info('DeckService', `Création batch de ${decksData.length} decks`)
+
+    return processBatch(
+      decksData,
+      async (data) => this.createDeck(data),
+      {
+        batchSize: options?.batchSize || 50,
+        onProgress: options?.onProgress,
+        onError: (error, data) => {
+          logger.error('DeckService', 'Échec création deck dans batch', { error, data })
+        },
+        continueOnError: false
+      }
+    )
   }
 }
 export const DECK_SERVICE_TOKEN = 'DeckService'

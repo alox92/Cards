@@ -31,12 +31,33 @@ export class SpacedRepetitionService {
       return err({code: 'SRS_SCHEDULE_FAILED', message: 'Erreur planification'})
     }
   }
-  getStudyQueue(allCards: CardEntity[], deckId: string, dailyNewLimit: number): Result<CardEntity[], {code: string; message: string}> {
+  getStudyQueue(allCards: CardEntity[], deckId: string, dailyNewLimit: number, maxTotal: number = 20): Result<CardEntity[], {code: string; message: string}> {
     try {
       const now = Date.now()
       const due = allCards.filter(c => c.deckId === deckId && c.nextReview <= now && !this.buriedToday.has(c.id))
-      const fresh = allCards.filter(c => c.deckId === deckId && c.totalReviews === 0 && c.deckId===deckId && !this.buriedToday.has(c.id)).slice(0, dailyNewLimit)
-      const queue = [...due, ...fresh]
+      const fresh = allCards.filter(c => c.deckId === deckId && c.totalReviews === 0 && !this.buriedToday.has(c.id))
+      
+      // Construire la queue en respectant les deux limites
+      let queue: CardEntity[] = []
+      
+      // D'abord ajouter les cartes dues (jusqu'à maxTotal)
+      queue = due.slice(0, maxTotal)
+      
+      // Puis ajouter nouvelles cartes si on a de la place
+      const remainingSlots = maxTotal - queue.length
+      if (remainingSlots > 0) {
+        const newCardsToAdd = Math.min(remainingSlots, dailyNewLimit)
+        queue.push(...fresh.slice(0, newCardsToAdd))
+      }
+      
+      logger.info('SpacedRepetitionService', 'Queue construite', {
+        due: due.length,
+        fresh: fresh.length,
+        queueSize: queue.length,
+        maxTotal,
+        dailyNewLimit
+      })
+      
       return ok(queue)
     } catch (e) {
       logger.error('SpacedRepetitionService', 'getStudyQueue: Erreur construction queue', e)
