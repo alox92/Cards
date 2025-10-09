@@ -43,7 +43,7 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
                 }
                 return true
               }
-            } catch (err) {
+            } catch (_err) {
               // Continue retry loop
             }
             
@@ -57,7 +57,7 @@ export function ServiceProvider({ children }: { children: ReactNode }) {
           }
           
           return false
-        } catch (error) {
+        } catch (_error) {
           if (!cancelled) {
             setError('Erreur d\'initialisation des services.')
           }

@@ -114,7 +114,7 @@ export class ConcurrentPerformanceMonitor {
     try {
       observer.observe({ entryTypes: ['longtask'] })
       this.observers.set('longtask', observer)
-    } catch (e) {
+    } catch (_e) {
       // Longtask not supported
     }
   }
@@ -133,7 +133,7 @@ export class ConcurrentPerformanceMonitor {
     try {
       observer.observe({ entryTypes: ['measure'] })
       this.observers.set('transitions', observer)
-    } catch (e) {
+    } catch (_e) {
       // Measure not supported
     }
   }

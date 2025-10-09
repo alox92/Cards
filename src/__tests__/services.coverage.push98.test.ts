@@ -104,7 +104,7 @@ describe('Final push >98% coverage', () => {
   it('PerformanceOptimizer default export access (touch lines)', async () => {
     const perfBundle = await import('@/utils/performanceOptimizer')
     // Accéder aux propriétés exportées pour marquer les dernières lignes
-    expect(perfBundle.default.PerformanceOptimizer).toBeTruthy()
-    expect(perfBundle.default.TIMING_CONFIGS).toBeTruthy()
+    expect(perfBundle.PerformanceOptimizer).toBeTruthy()
+    expect(perfBundle.TIMING_CONFIGS).toBeTruthy()
   })
 })

@@ -197,7 +197,7 @@ export class EnhancedPerformanceMonitor {
 
         navigationObserver.observe({ entryTypes: ['navigation'] })
         this.observers.push(navigationObserver)
-      } catch (e) {
+      } catch (_e) {
         // Navigation timing not supported
       }
     }
