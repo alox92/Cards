@@ -6,6 +6,7 @@ import { DECK_SERVICE_TOKEN, DeckService } from '@/application/services/DeckServ
 import { SEARCH_SERVICE_TOKEN, SearchService } from '@/application/services/SearchService'
 import type { CardEntity } from '@/domain/entities/Card'
 import type { DeckEntity } from '@/domain/entities/Deck'
+import Icons from '@/ui/components/common/Icons'
 
 interface GlobalSearchBarProps {
   onSelectCard?: (card: CardEntity) => void
@@ -167,7 +168,8 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({ onSelectCard, 
               <div className="flex items-start justify-between">
                 <div className="flex-1 pr-2">
                   <div className="font-medium flex items-center gap-2">
-                    {r.type === 'deck' ? '🗂️' : '🃏'} <span dangerouslySetInnerHTML={{ __html: highlightAndSanitize(r.title, query) }} />
+                    {r.type === 'deck' ? <Icons.Folder size="sm" /> : <Icons.File size="sm" />} 
+                    <span dangerouslySetInnerHTML={{ __html: highlightAndSanitize(r.title, query) }} />
                     {r.type === 'deck' && <span className="text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 px-2 py-0.5 rounded-full">Deck</span>}
                     {r.type === 'card' && <span className="text-xs bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300 px-2 py-0.5 rounded-full">Card</span>}
                   </div>

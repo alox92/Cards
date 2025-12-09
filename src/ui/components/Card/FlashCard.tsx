@@ -134,9 +134,9 @@ export const FlashCard = memo<FlashCardProps>(({
       }
     }
 
-    return {
-      color: getDifficultyColor(card.difficulty),
-      text: getDifficultyText(card.difficulty)
+    return (
+
+      <div className={`max-w-[900px] mx-auto ${className}`}>
     }
   }, [card.difficulty])
 
@@ -182,7 +182,7 @@ export const FlashCard = memo<FlashCardProps>(({
         >
           {/* Face avant */}
           <div className="card-face card-front">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 min-h-[300px] flex flex-col items-center justify-center cursor-pointer hover:shadow-xl transition-shadow">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 min-h-[400px] flex flex-col items-center justify-center cursor-pointer hover:shadow-xl transition-shadow">
               {/* Image avant si présente */}
               {card.frontImage && (
                 <FrontImage card={card} />
@@ -215,7 +215,7 @@ export const FlashCard = memo<FlashCardProps>(({
 
           {/* Face arrière */}
           <div className="card-face card-back">
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg border border-blue-200 p-8 min-h-[300px] flex flex-col items-center justify-center">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg border border-blue-200 p-8 min-h-[400px] flex flex-col items-center justify-center">
               {/* Image arrière si présente */}
               {card.backImage && (
                 <BackImage card={card} />

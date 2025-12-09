@@ -145,7 +145,7 @@ export class IntelligentPreloader {
    */
   addPreloadTask(id: string, load: () => Promise<any>, priority: number = 0): void {
     if (!this.shouldPreload()) {
-      console.log(`⚡ Skipping preload for ${id} due to network conditions`)
+      // Skipping preload due to network conditions
       return
     }
 
@@ -180,9 +180,9 @@ export class IntelligentPreloader {
           await task.load()
         }
 
-        console.log(`✅ Preloaded: ${task.id}`)
+        // Preload completed
       } catch (error) {
-        console.warn(`❌ Preload failed for ${task.id}:`, error)
+        // Preload failed silencieux
       }
 
       // Yield to main thread
@@ -198,7 +198,7 @@ export class IntelligentPreloader {
   preloadCriticalComponents(): void {
     this.addPreloadTask('study-page', () => import('@/ui/pages/StudyPage'), 10)
     this.addPreloadTask('deck-manager', () => import('@/ui/pages/DeckCardsManagerPage'), 8)
-    this.addPreloadTask('advanced-stats', () => import('@/ui/pages/AdvancedStatsPage'), 6)
+    this.addPreloadTask('advanced-stats', () => import('@/ui/pages/StatsPage'), 6)
     this.addPreloadTask('rich-editor', () => import('@/ui/components/Editor/UltraRichTextEditor'), 4)
   }
 }
@@ -244,7 +244,7 @@ export class PerformanceInstrumentation {
         return duration
       }
     } catch (error) {
-      console.warn('Performance measurement failed:', error)
+      // Performance measurement failed silencieux
     }
 
     return 0
@@ -392,7 +392,7 @@ export class DOMBatcher {
       try {
         operation()
       } catch (error) {
-        console.warn('Batched DOM operation failed:', error)
+        // Batched DOM operation failed silencieux
       }
     })
   }

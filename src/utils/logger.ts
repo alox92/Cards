@@ -1,6 +1,6 @@
 /**
  * 🔍 SYSTÈME DE LOGGING AVANCÉ POUR CARDS
- * 
+ *
  * Système de logging structuré avec niveaux, couleurs et tracking de performance
  * pour un débogage efficace et une traçabilité complète.
  */
@@ -11,61 +11,89 @@ export enum LogLevel {
   INFO = 2,
   WARN = 3,
   ERROR = 4,
-  CRITICAL = 5
+  CRITICAL = 5,
 }
 
 export interface LogEntry {
-  timestamp: Date
-  level: LogLevel
-  category: string
-  message: string
-  data?: any
-  stack?: string
+  timestamp: Date;
+  level: LogLevel;
+  category: string;
+  message: string;
+  data?: unknown;
+  stack?: string;
   performance?: {
-    duration?: number
-    memory?: number
-    fps?: number
-  }
+    duration?: number;
+    memory?: number;
+    fps?: number;
+  };
   context?: {
-    component?: string
-    action?: string
-    userId?: string
-    sessionId?: string
-  }
+    component?: string;
+    action?: string;
+    userId?: string;
+    sessionId?: string;
+  };
+}
+
+export interface LoggerPerformanceSummary {
+  sessionId: string;
+  totalLogs: number;
+  errors: number;
+  warnings: number;
+  categories: string[];
+  timespan: {
+    start: Date;
+    end: Date;
+  } | null;
+  /** Nombre de timers encore actifs (non terminés) */
+  activeTimers?: number;
+  /** Nombre d'opérations de performance complétées (timers terminés) */
+  completedOperations?: number;
+  /** Durée moyenne en ms des opérations mesurées */
+  averageDuration?: number;
 }
 
 export interface LoggerConfig {
-  minLevel: LogLevel
-  enableConsole: boolean
-  enableStorage: boolean
-  enablePerformanceTracking: boolean
-  maxStoredLogs: number
-  colors: boolean
-  timestamp: boolean
-  captureStack: boolean
+  minLevel: LogLevel;
+  enableConsole: boolean;
+  enableStorage: boolean;
+  enablePerformanceTracking: boolean;
+  maxStoredLogs: number;
+  colors: boolean;
+  timestamp: boolean;
+  captureStack: boolean;
   /** Délai minimum avant réémission d'un même (level+category+message) en ms */
-  rateLimitMs: number
+  rateLimitMs: number;
   /** Activer la déduplication/rate‑limit */
-  enableRateLimit: boolean
+  enableRateLimit: boolean;
 }
 
 class CardsLogger {
-  private config: LoggerConfig
-  private logs: LogEntry[] = []
-  private ringBuffer: LogEntry[] = []
-  private ringCapacity = 500
-  private ringIndex = 0
-  private samplingConfig = { enabled: true, maxPerSecond: 120, currentSecond: 0, emittedThisSecond: 0 }
-  private performanceMarks = new Map<string, number>()
-  private sessionId: string
-  private listeners = new Set<(entry: LogEntry)=>void>()
+  private config: LoggerConfig;
+  private logs: LogEntry[] = [];
+  private ringBuffer: LogEntry[] = [];
+  private ringCapacity = 500;
+  private ringIndex = 0;
+  private samplingConfig = {
+    enabled: true,
+    maxPerSecond: 120,
+    currentSecond: 0,
+    emittedThisSecond: 0,
+  };
+  private performanceMarks = new Map<string, number>();
+  private sessionId: string;
+  private listeners = new Set<(entry: LogEntry) => void>();
   // Rate limiting (clé = level|category|message)
-  private lastLogMap = new Map<string, { last: number; suppressed: number }>()
+  private lastLogMap = new Map<string, { last: number; suppressed: number }>();
   // Batching pour catégories spécifiques (ex: transitions)
-  private batchBuffers = new Map<string, LogEntry[]>()
-  private batchConfig = { categories: new Set<string>(['Transition','FluidTransition']), flushIntervalMs: 6000, maxBatchSize: 60 }
-  private lastBatchFlush = 0
-  private batchingEnabled = (typeof import.meta !== 'undefined' && (import.meta as any).env?.DEV) // actif seulement en dev par défaut
+  private batchBuffers = new Map<string, LogEntry[]>();
+  private batchConfig = {
+    categories: new Set<string>(["Transition", "FluidTransition", "FPS"]),
+    flushIntervalMs: 6000,
+    maxBatchSize: 60,
+  };
+  private lastBatchFlush = 0;
+  private batchingEnabled =
+    typeof import.meta !== "undefined" && (import.meta as any).env?.DEV; // actif seulement en dev par défaut
 
   constructor(config: Partial<LoggerConfig> = {}) {
     this.config = {
@@ -75,53 +103,54 @@ class CardsLogger {
       enablePerformanceTracking: true,
       maxStoredLogs: 1000,
       colors: true,
-  timestamp: true,
-  captureStack: true,
+      timestamp: true,
+      captureStack: true,
       rateLimitMs: 5000,
       enableRateLimit: true,
-      ...config
-    }
-    
-    this.sessionId = this.generateSessionId()
-    this.initializeLogger()
+      ...config,
+    };
+
+    this.sessionId = this.generateSessionId();
+    this.initializeLogger();
   }
 
   private generateSessionId(): string {
-    return `cards_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    return `cards_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   private initializeLogger(): void {
-    this.info('Logger', '🚀 Cards Logger initialisé', {
+    this.info("Logger", "🚀 Cards Logger initialisé", {
       sessionId: this.sessionId,
       config: this.config,
-      timestamp: new Date().toISOString()
-    })
+      timestamp: new Date().toISOString(),
+    });
   }
 
   private shouldLog(level: LogLevel): boolean {
-    return level >= this.config.minLevel
+    return level >= this.config.minLevel;
   }
 
   private formatMessage(entry: LogEntry): string {
-    const levelNames = ['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL']
+    const levelNames = ["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"];
     const levelColors = [
-      '\x1b[37m', // TRACE - white
-      '\x1b[36m', // DEBUG - cyan
-      '\x1b[32m', // INFO - green
-      '\x1b[33m', // WARN - yellow
-      '\x1b[31m', // ERROR - red
-      '\x1b[35m'  // CRITICAL - magenta
-    ]
-    
-    const reset = '\x1b[0m'
-    const timestamp = this.config.timestamp ? 
-      `[${entry.timestamp.toISOString()}] ` : ''
-    
-    const color = this.config.colors ? levelColors[entry.level] : ''
-    const levelName = levelNames[entry.level].padEnd(8)
-    const category = entry.category.padEnd(15)
-    
-    return `${timestamp}${color}${levelName}${reset} [${category}] ${entry.message}`
+      "\x1b[37m", // TRACE - white
+      "\x1b[36m", // DEBUG - cyan
+      "\x1b[32m", // INFO - green
+      "\x1b[33m", // WARN - yellow
+      "\x1b[31m", // ERROR - red
+      "\x1b[35m", // CRITICAL - magenta
+    ];
+
+    const reset = "\x1b[0m";
+    const timestamp = this.config.timestamp
+      ? `[${entry.timestamp.toISOString()}] `
+      : "";
+
+    const color = this.config.colors ? levelColors[entry.level] : "";
+    const levelName = levelNames[entry.level].padEnd(8);
+    const category = entry.category.padEnd(15);
+
+    return `${timestamp}${color}${levelName}${reset} [${category}] ${entry.message}`;
   }
 
   private createLogEntry(
@@ -129,7 +158,7 @@ class CardsLogger {
     category: string,
     message: string,
     data?: any,
-    context?: LogEntry['context']
+    context?: LogEntry["context"]
   ): LogEntry {
     const entry: LogEntry = {
       timestamp: new Date(),
@@ -139,369 +168,495 @@ class CardsLogger {
       data,
       context: {
         sessionId: this.sessionId,
-        ...context
-      }
-    }
+        ...context,
+      },
+    };
 
     // Ajout des informations de performance si activé
     if (this.config.enablePerformanceTracking) {
       entry.performance = {
-        memory: (performance as any).memory?.usedJSHeapSize || 0
-      }
+        memory: (performance as any).memory?.usedJSHeapSize || 0,
+      };
     }
 
     // Ajout de la stack trace pour les erreurs
     if (level >= LogLevel.ERROR && this.config.captureStack) {
-      entry.stack = new Error().stack
+      entry.stack = new Error().stack;
     }
 
-    return entry
+    return entry;
   }
 
   private logToConsole(entry: LogEntry): void {
-    if (!this.config.enableConsole) return
+    if (!this.config.enableConsole) return;
 
-    const message = this.formatMessage(entry)
-    
+    const message = this.formatMessage(entry);
+
     switch (entry.level) {
       case LogLevel.TRACE:
       case LogLevel.DEBUG:
-        console.debug(message, entry.data)
-        break
+        console.debug(message, entry.data);
+        break;
       case LogLevel.INFO:
-        console.info(message, entry.data)
-        break
+        console.info(message, entry.data);
+        break;
       case LogLevel.WARN:
-        console.warn(message, entry.data)
-        break
+        console.warn(message, entry.data);
+        break;
       case LogLevel.ERROR:
       case LogLevel.CRITICAL:
-        console.error(message, entry.data, entry.stack)
-        break
+        console.error(message, entry.data, entry.stack);
+        break;
     }
   }
 
   private storeLog(entry: LogEntry): void {
-    if (!this.config.enableStorage) return
+    if (!this.config.enableStorage) return;
 
-    this.logs.push(entry)
-    
+    this.logs.push(entry);
+
     // Limiter le nombre de logs stockés
     if (this.logs.length > this.config.maxStoredLogs) {
-      this.logs.splice(0, this.logs.length - this.config.maxStoredLogs)
+      this.logs.splice(0, this.logs.length - this.config.maxStoredLogs);
     }
 
     // Sauvegarder en localStorage pour persistance
     try {
-      const recentLogs = this.logs.slice(-100) // Seulement les 100 derniers
-      localStorage.setItem('cards_logs', JSON.stringify(recentLogs))
+      const recentLogs = this.logs.slice(-100); // Seulement les 100 derniers
+      localStorage.setItem("cards_logs", JSON.stringify(recentLogs));
     } catch (_error) {
       // Ignorer les erreurs de stockage
     }
 
     // Notifier les abonnés (LogViewer temps réel)
-    this.listeners.forEach(l => {
-      try { l(entry) } catch {/* ignore listener errors */}
-    })
+    this.listeners.forEach((l) => {
+      try {
+        l(entry);
+      } catch {
+        /* ignore listener errors */
+      }
+    });
   }
 
   private log(
     level: LogLevel,
     category: string,
     message: string,
-    data?: any,
-    context?: LogEntry['context']
+    data?: unknown,
+    context?: LogEntry["context"]
   ): void {
-    if (!this.shouldLog(level)) return
+    if (!this.shouldLog(level)) return;
 
     // Sampling simple: limite d'émissions par seconde pour éviter déluge
-    if(this.samplingConfig.enabled){
-      const sec = Math.floor(Date.now()/1000)
-      if(sec !== this.samplingConfig.currentSecond){
-        this.samplingConfig.currentSecond = sec
-        this.samplingConfig.emittedThisSecond = 0
+    if (this.samplingConfig.enabled) {
+      const sec = Math.floor(Date.now() / 1000);
+      if (sec !== this.samplingConfig.currentSecond) {
+        this.samplingConfig.currentSecond = sec;
+        this.samplingConfig.emittedThisSecond = 0;
       }
-      if(this.samplingConfig.emittedThisSecond >= this.samplingConfig.maxPerSecond){
+      if (
+        this.samplingConfig.emittedThisSecond >=
+        this.samplingConfig.maxPerSecond
+      ) {
         // Incrémente suppression sur clé globale sampling
-        const k = `SAMPLE|ALL|*`
-        const rec = this.lastLogMap.get(k) || { last: 0, suppressed: 0 }
-        rec.suppressed += 1; rec.last = Date.now(); this.lastLogMap.set(k, rec)
-        return
+        const k = `SAMPLE|ALL|*`;
+        const rec = this.lastLogMap.get(k) || { last: 0, suppressed: 0 };
+        rec.suppressed += 1;
+        rec.last = Date.now();
+        this.lastLogMap.set(k, rec);
+        return;
       }
-      this.samplingConfig.emittedThisSecond++
+      this.samplingConfig.emittedThisSecond++;
     }
 
     // Rate limiting (surtout pour DEBUG/WARN/ERROR répétitifs)
-    if(this.config.enableRateLimit){
-      const key = `${level}|${category}|${message}`
-      const now = Date.now()
-      const rec = this.lastLogMap.get(key)
-      if(rec){
-        if(now - rec.last < this.config.rateLimitMs){
-          rec.suppressed += 1
-          return // on supprime ce log
+    if (this.config.enableRateLimit) {
+      const key = `${level}|${category}|${message}`;
+      const now = Date.now();
+      const rec = this.lastLogMap.get(key);
+      if (rec) {
+        if (now - rec.last < this.config.rateLimitMs) {
+          rec.suppressed += 1;
+          return; // on supprime ce log
         } else {
           // On réémet et mentionne combien ont été supprimés
-          if(rec.suppressed > 0){
-            data = { ...(data||{}), _suppressed: rec.suppressed }
+          if (rec.suppressed > 0) {
+            const baseData =
+              data && typeof data === "object"
+                ? data
+                : ({} as Record<string, unknown>);
+            data = { ...baseData, _suppressed: rec.suppressed };
           }
-          rec.last = now
-          rec.suppressed = 0
+          rec.last = now;
+          rec.suppressed = 0;
         }
       } else {
-        this.lastLogMap.set(key, { last: now, suppressed: 0 })
+        this.lastLogMap.set(key, { last: now, suppressed: 0 });
       }
     }
 
-    const entry = this.createLogEntry(level, category, message, data, context)
+    const entry = this.createLogEntry(level, category, message, data, context);
 
     // Ring buffer en parallèle (consultable par diagnostics sans prendre toutes les logs principales)
-    if(this.ringBuffer.length < this.ringCapacity){
-      this.ringBuffer.push(entry)
+    if (this.ringBuffer.length < this.ringCapacity) {
+      this.ringBuffer.push(entry);
     } else {
-      this.ringBuffer[this.ringIndex] = entry
-      this.ringIndex = (this.ringIndex + 1) % this.ringCapacity
+      this.ringBuffer[this.ringIndex] = entry;
+      this.ringIndex = (this.ringIndex + 1) % this.ringCapacity;
     }
 
     // Batching: uniquement INFO/DEBUG des catégories ciblées (pas d'erreurs critiques)
-  if(this.batchingEnabled && this.batchConfig.categories.has(category) && level <= LogLevel.INFO){
-      const buf = this.batchBuffers.get(category) || []
-      buf.push(entry)
-      this.batchBuffers.set(category, buf)
-      const now = Date.now()
-      if(buf.length >= this.batchConfig.maxBatchSize || (now - this.lastBatchFlush) >= this.batchConfig.flushIntervalMs){
-        this.flushBatch(category)
+    if (
+      this.batchingEnabled &&
+      this.batchConfig.categories.has(category) &&
+      level <= LogLevel.INFO
+    ) {
+      const buf = this.batchBuffers.get(category) || [];
+      buf.push(entry);
+      this.batchBuffers.set(category, buf);
+      const now = Date.now();
+      if (
+        buf.length >= this.batchConfig.maxBatchSize ||
+        now - this.lastBatchFlush >= this.batchConfig.flushIntervalMs
+      ) {
+        this.flushBatch(category);
       }
-      return
+      return;
     }
 
-    this.logToConsole(entry)
-    this.storeLog(entry)
+    this.logToConsole(entry);
+    this.storeLog(entry);
   }
 
   // Méthodes publiques de logging
-  trace(category: string, message: string, data?: any, context?: LogEntry['context']): void {
-    this.log(LogLevel.TRACE, category, message, data, context)
+  trace(
+    category: string,
+    message: string,
+    data?: unknown,
+    context?: LogEntry["context"]
+  ): void {
+    this.log(LogLevel.TRACE, category, message, data, context);
   }
 
-  debug(category: string, message: string, data?: any, context?: LogEntry['context']): void {
-    this.log(LogLevel.DEBUG, category, message, data, context)
+  debug(
+    category: string,
+    message: string,
+    data?: unknown,
+    context?: LogEntry["context"]
+  ): void {
+    this.log(LogLevel.DEBUG, category, message, data, context);
   }
 
-  info(category: string, message: string, data?: any, context?: LogEntry['context']): void {
-    this.log(LogLevel.INFO, category, message, data, context)
+  info(
+    category: string,
+    message: string,
+    data?: unknown,
+    context?: LogEntry["context"]
+  ): void {
+    this.log(LogLevel.INFO, category, message, data, context);
   }
 
-  warn(category: string, message: string, data?: any, context?: LogEntry['context']): void {
-    this.log(LogLevel.WARN, category, message, data, context)
+  warn(
+    category: string,
+    message: string,
+    data?: unknown,
+    context?: LogEntry["context"]
+  ): void {
+    this.log(LogLevel.WARN, category, message, data, context);
   }
 
-  error(category: string, message: string, data?: any, context?: LogEntry['context']): void {
-    this.log(LogLevel.ERROR, category, message, data, context)
+  error(
+    category: string,
+    message: string,
+    data?: unknown,
+    context?: LogEntry["context"]
+  ): void {
+    this.log(LogLevel.ERROR, category, message, data, context);
   }
 
-  critical(category: string, message: string, data?: any, context?: LogEntry['context']): void {
-    this.log(LogLevel.CRITICAL, category, message, data, context)
+  critical(
+    category: string,
+    message: string,
+    data?: unknown,
+    context?: LogEntry["context"]
+  ): void {
+    this.log(LogLevel.CRITICAL, category, message, data, context);
   }
 
   // Méthodes de performance tracking
   startTimer(label: string): void {
-    this.performanceMarks.set(label, performance.now())
-    this.debug('Performance', `⏱️  Timer démarré: ${label}`)
+    this.performanceMarks.set(label, performance.now());
+    this.debug("Performance", `⏱️  Timer démarré: ${label}`);
   }
 
   endTimer(label: string): number {
-    const startTime = this.performanceMarks.get(label)
+    const startTime = this.performanceMarks.get(label);
     if (!startTime) {
-  // Silencieux si timer déjà consommé (évite bruit en StrictMode / appels répétés)
-  return 0
+      // Silencieux si timer déjà consommé (évite bruit en StrictMode / appels répétés)
+      return 0;
     }
 
-    const duration = performance.now() - startTime
-    this.performanceMarks.delete(label)
-    
-    this.info('Performance', `⏱️  Timer terminé: ${label}`, {
-      duration: `${duration.toFixed(2)}ms`,
-      durationMs: duration
-    })
+    const duration = performance.now() - startTime;
+    this.performanceMarks.delete(label);
 
-    return duration
+    this.info("Performance", `⏱️  Timer terminé: ${label}`, {
+      duration: `${duration.toFixed(2)}ms`,
+      durationMs: duration,
+    });
+
+    return duration;
   }
 
   // Méthodes d'analyse des logs
   getLogs(level?: LogLevel, category?: string): LogEntry[] {
-    let filteredLogs = this.logs
+    let filteredLogs = this.logs;
 
     if (level !== undefined) {
-      filteredLogs = filteredLogs.filter(log => log.level >= level)
+      filteredLogs = filteredLogs.filter((log) => log.level >= level);
     }
 
     if (category) {
-      filteredLogs = filteredLogs.filter(log => 
+      filteredLogs = filteredLogs.filter((log) =>
         log.category.toLowerCase().includes(category.toLowerCase())
-      )
+      );
     }
 
-    return filteredLogs
+    return filteredLogs;
   }
 
   getErrorLogs(): LogEntry[] {
-    return this.getLogs(LogLevel.ERROR)
+    return this.getLogs(LogLevel.ERROR);
   }
 
-  getPerformanceSummary(): any {
-    const errors = this.getErrorLogs()
-    const warnings = this.getLogs(LogLevel.WARN)
-    
+  getPerformanceSummary(): LoggerPerformanceSummary {
+    const errors = this.getErrorLogs();
+    const warnings = this.getLogs(LogLevel.WARN);
+
+    // Extraire les métriques de performance à partir des logs "Performance"
+    const performanceLogs = this.logs.filter(
+      (log) =>
+        log.category === "Performance" &&
+        log.data &&
+        typeof (log.data as any).durationMs === "number"
+    );
+    const completedOperations = performanceLogs.length;
+    const totalDuration = performanceLogs.reduce((acc, log) => {
+      const value = (log.data as any).durationMs as number | undefined;
+      return typeof value === "number" ? acc + value : acc;
+    }, 0);
+    const averageDuration =
+      completedOperations > 0 ? totalDuration / completedOperations : undefined;
+
     return {
       sessionId: this.sessionId,
       totalLogs: this.logs.length,
       errors: errors.length,
       warnings: warnings.length,
-      categories: [...new Set(this.logs.map(log => log.category))],
-      timespan: this.logs.length > 0 ? {
-        start: this.logs[0].timestamp,
-        end: this.logs[this.logs.length - 1].timestamp
-      } : null
-    }
+      categories: [...new Set(this.logs.map((log) => log.category))],
+      timespan:
+        this.logs.length > 0
+          ? {
+              start: this.logs[0].timestamp,
+              end: this.logs[this.logs.length - 1].timestamp,
+            }
+          : null,
+      activeTimers: this.performanceMarks.size || undefined,
+      completedOperations: completedOperations || undefined,
+      averageDuration,
+    };
   }
 
   exportLogs(): string {
-    return JSON.stringify({
-      sessionId: this.sessionId,
-      timestamp: new Date().toISOString(),
-      summary: this.getPerformanceSummary(),
-      logs: this.logs
-    }, null, 2)
+    return JSON.stringify(
+      {
+        sessionId: this.sessionId,
+        timestamp: new Date().toISOString(),
+        summary: this.getPerformanceSummary(),
+        logs: this.logs,
+      },
+      null,
+      2
+    );
   }
 
   clearLogs(): void {
-    this.logs = []
-    localStorage.removeItem('cards_logs')
-    this.info('Logger', '🗑️  Logs effacés')
+    this.logs = [];
+    localStorage.removeItem("cards_logs");
+    this.info("Logger", "🗑️  Logs effacés");
   }
 
   // Configuration dynamique
   setLogLevel(level: LogLevel): void {
-    this.config.minLevel = level
-    this.info('Logger', `🔧 Niveau de log changé: ${LogLevel[level]}`)
+    this.config.minLevel = level;
+    this.info("Logger", `🔧 Niveau de log changé: ${LogLevel[level]}`);
   }
 
-  setRateLimit(enabled: boolean, rateLimitMs?: number){
-    this.config.enableRateLimit = enabled
-    if(rateLimitMs) this.config.rateLimitMs = rateLimitMs
-    this.info('Logger', `🔧 RateLimit: ${enabled ? 'activé' : 'désactivé'} (${this.config.rateLimitMs}ms)`) 
+  setRateLimit(enabled: boolean, rateLimitMs?: number) {
+    this.config.enableRateLimit = enabled;
+    if (rateLimitMs) this.config.rateLimitMs = rateLimitMs;
+    this.info(
+      "Logger",
+      `🔧 RateLimit: ${enabled ? "activé" : "désactivé"} (${
+        this.config.rateLimitMs
+      }ms)`
+    );
   }
 
   enablePerformanceTracking(enabled: boolean): void {
-    this.config.enablePerformanceTracking = enabled
-    this.info('Logger', `🔧 Performance tracking: ${enabled ? 'activé' : 'désactivé'}`)
+    this.config.enablePerformanceTracking = enabled;
+    this.info(
+      "Logger",
+      `🔧 Performance tracking: ${enabled ? "activé" : "désactivé"}`
+    );
   }
 
   // Extraction structurée (pour tests / diagnostics UI)
-  exportSnapshot(level: LogLevel = LogLevel.DEBUG){
-    return this.getLogs(level).map(l => ({
+  exportSnapshot(level: LogLevel = LogLevel.DEBUG) {
+    return this.getLogs(level).map((l) => ({
       t: l.timestamp.getTime(),
       lvl: LogLevel[l.level],
       cat: l.category,
       msg: l.message,
       dur: l.performance?.duration,
-      data: l.data && JSON.stringify(l.data).slice(0,500)
-    }))
+      data: l.data && JSON.stringify(l.data).slice(0, 500),
+    }));
   }
 
   // Flush vers console en groupe (debug bulk)
-  flushToConsole(){
-    console.groupCollapsed(`📦 Log flush (${this.logs.length})`)
-    for(const l of this.logs){ this.logToConsole(l) }
-    console.groupEnd()
+  flushToConsole() {
+    console.groupCollapsed(`📦 Log flush (${this.logs.length})`);
+    for (const l of this.logs) {
+      this.logToConsole(l);
+    }
+    console.groupEnd();
   }
   // Flush batch spécifique
-  flushBatch(category?: string){
-    const now = Date.now()
-    if(category){
-      const buf = this.batchBuffers.get(category)
-      if(buf && buf.length){
-        console.groupCollapsed(`🌀 Batch ${category} (${buf.length})`)
-        buf.forEach(e=>{ this.logToConsole(e); this.storeLog(e) })
-        console.groupEnd()
-        this.batchBuffers.set(category, [])
+  flushBatch(category?: string) {
+    const now = Date.now();
+    if (category) {
+      const buf = this.batchBuffers.get(category);
+      if (buf && buf.length) {
+        console.groupCollapsed(`🌀 Batch ${category} (${buf.length})`);
+        buf.forEach((e) => {
+          this.logToConsole(e);
+          this.storeLog(e);
+        });
+        console.groupEnd();
+        this.batchBuffers.set(category, []);
       }
     } else {
-      for(const [cat, buf] of this.batchBuffers.entries()){
-        if(buf.length){
-          console.groupCollapsed(`🌀 Batch ${cat} (${buf.length})`)
-          buf.forEach(e=>{ this.logToConsole(e); this.storeLog(e) })
-          console.groupEnd()
-          this.batchBuffers.set(cat, [])
+      for (const [cat, buf] of this.batchBuffers.entries()) {
+        if (buf.length) {
+          console.groupCollapsed(`🌀 Batch ${cat} (${buf.length})`);
+          buf.forEach((e) => {
+            this.logToConsole(e);
+            this.storeLog(e);
+          });
+          console.groupEnd();
+          this.batchBuffers.set(cat, []);
         }
       }
     }
-    this.lastBatchFlush = now
+    this.lastBatchFlush = now;
   }
   // Permet d'injecter un lot d'entrées (ex: import)
-  importLogs(raw: LogEntry[]){
-    this.logs.push(...raw)
+  importLogs(raw: LogEntry[]) {
+    this.logs.push(...raw);
   }
 
   // --- API d'abonnement temps réel ---
-  subscribe(listener: (entry: LogEntry)=>void){
-    this.listeners.add(listener)
-    return () => this.listeners.delete(listener)
+  subscribe(listener: (entry: LogEntry) => void) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
   }
-  getAllLogs(){ return [...this.logs] }
+  getAllLogs() {
+    return [...this.logs];
+  }
 
   // --- Diagnostics suppression ---
-  getSuppressionSummary(){
-    const out: { key: string; suppressed: number }[] = []
-    for(const [k,v] of this.lastLogMap.entries()) if(v.suppressed) out.push({ key: k, suppressed: v.suppressed })
-    return out.sort((a,b)=> b.suppressed - a.suppressed)
+  getSuppressionSummary() {
+    const out: { key: string; suppressed: number }[] = [];
+    for (const [k, v] of this.lastLogMap.entries())
+      if (v.suppressed) out.push({ key: k, suppressed: v.suppressed });
+    return out.sort((a, b) => b.suppressed - a.suppressed);
   }
-  getRingSnapshot(){
-    if(this.ringBuffer.length < this.ringCapacity) return [...this.ringBuffer]
+  getRingSnapshot() {
+    if (this.ringBuffer.length < this.ringCapacity) return [...this.ringBuffer];
     // Retour ordonné chronologiquement (ring rotation)
-    return [...this.ringBuffer.slice(this.ringIndex), ...this.ringBuffer.slice(0, this.ringIndex)]
+    return [
+      ...this.ringBuffer.slice(this.ringIndex),
+      ...this.ringBuffer.slice(0, this.ringIndex),
+    ];
   }
-  resetSuppressionCounters(){
-    for(const val of this.lastLogMap.values()) val.suppressed = 0
+  resetSuppressionCounters() {
+    for (const val of this.lastLogMap.values()) val.suppressed = 0;
   }
 
   // --- Batching configuration ---
-  setBatchingEnabled(enabled: boolean){
-    this.batchingEnabled = enabled
-    this.info('Logger', `Batching ${enabled ? 'activé' : 'désactivé'}`)
+  setBatchingEnabled(enabled: boolean) {
+    this.batchingEnabled = enabled;
+    this.info("Logger", `Batching ${enabled ? "activé" : "désactivé"}`);
   }
-  configureBatch(options: { categories?: string[]; flushIntervalMs?: number; maxBatchSize?: number }){
-    if(options.categories){ this.batchConfig.categories = new Set(options.categories) }
-    if(options.flushIntervalMs){ this.batchConfig.flushIntervalMs = options.flushIntervalMs }
-    if(options.maxBatchSize){ this.batchConfig.maxBatchSize = options.maxBatchSize }
-    this.info('Logger','Batch config mise à jour', { cfg: { categories: [...this.batchConfig.categories], flushIntervalMs: this.batchConfig.flushIntervalMs, maxBatchSize: this.batchConfig.maxBatchSize } })
+  configureBatch(options: {
+    categories?: string[];
+    flushIntervalMs?: number;
+    maxBatchSize?: number;
+  }) {
+    if (options.categories) {
+      this.batchConfig.categories = new Set(options.categories);
+    }
+    if (options.flushIntervalMs) {
+      this.batchConfig.flushIntervalMs = options.flushIntervalMs;
+    }
+    if (options.maxBatchSize) {
+      this.batchConfig.maxBatchSize = options.maxBatchSize;
+    }
+    this.info("Logger", "Batch config mise à jour", {
+      cfg: {
+        categories: [...this.batchConfig.categories],
+        flushIntervalMs: this.batchConfig.flushIntervalMs,
+        maxBatchSize: this.batchConfig.maxBatchSize,
+      },
+    });
   }
 
   // ---- Hooks internes test ----
   /** Retourne la map interne (read-only) pour tests ciblés */
-  __getInternalSuppressionMap(){ return this.lastLogMap }
+  __getInternalSuppressionMap() {
+    return this.lastLogMap;
+  }
+
+  hasTimer(label: string): boolean {
+    return this.performanceMarks.has(label);
+  }
 }
 
 // Instance globale du logger
-import { FLAGS } from '@/utils/featureFlags'
+import { FLAGS } from "@/utils/featureFlags";
 
 // Parsing niveau de log via env (VITE_LOG_LEVEL=trace|debug|info|warn|error|critical)
 function parseLogLevel(raw?: string): LogLevel {
   // Avoid accessing process.env in browser (undefined). Rely on import.meta.env only.
-  const isDev = !!(import.meta as any).env?.DEV
-  if(!raw) return isDev ? LogLevel.DEBUG : LogLevel.INFO
-  switch(raw.toLowerCase()){
-    case 'trace': return LogLevel.TRACE
-    case 'debug': return LogLevel.DEBUG
-    case 'info': return LogLevel.INFO
-    case 'warn': return LogLevel.WARN
-    case 'error': return LogLevel.ERROR
-    case 'critical': return LogLevel.CRITICAL
-    default: return LogLevel.INFO
+  const isDev = !!(import.meta as any).env?.DEV;
+  if (!raw) return isDev ? LogLevel.DEBUG : LogLevel.INFO;
+  switch (raw.toLowerCase()) {
+    case "trace":
+      return LogLevel.TRACE;
+    case "debug":
+      return LogLevel.DEBUG;
+    case "info":
+      return LogLevel.INFO;
+    case "warn":
+      return LogLevel.WARN;
+    case "error":
+      return LogLevel.ERROR;
+    case "critical":
+      return LogLevel.CRITICAL;
+    default:
+      return LogLevel.INFO;
   }
 }
-const rawLevel = (import.meta as any).env?.VITE_LOG_LEVEL
+const rawLevel = (import.meta as any).env?.VITE_LOG_LEVEL;
 
 export const logger = new CardsLogger({
   minLevel: parseLogLevel(rawLevel),
@@ -509,22 +664,28 @@ export const logger = new CardsLogger({
   enablePerformanceTracking: !!FLAGS.diagnosticsEnabled,
   colors: true,
   timestamp: true,
-  captureStack: true
-})
+  captureStack: true,
+});
 
 // Application du flag batching (override du comportement DEV par défaut)
-if(!FLAGS.logBatchingEnabled) { logger.setBatchingEnabled(false) }
+if (!FLAGS.logBatchingEnabled) {
+  logger.setBatchingEnabled(false);
+}
 
 // Helper pour les erreurs avec types
-export function logError(category: string, error: Error | unknown, context?: any): void {
+export function logError(
+  category: string,
+  error: Error | unknown,
+  context?: Record<string, unknown>
+): void {
   if (error instanceof Error) {
     logger.error(category, error.message, {
       name: error.name,
       stack: error.stack,
-      context
-    })
+      context,
+    });
   } else {
-    logger.error(category, 'Erreur inconnue', { error, context })
+    logger.error(category, "Erreur inconnue", { error, context });
   }
 }
 
@@ -534,23 +695,23 @@ export function loggedPromise<T>(
   category: string,
   description: string
 ): Promise<T> {
-  logger.debug(category, `⏳ Début: ${description}`)
+  logger.debug(category, `⏳ Début: ${description}`);
   // Démarrer le timer uniquement s'il n'existe pas déjà
-  if(!(logger as any).performanceMarks?.has?.(description)) {
-    logger.startTimer(description)
+  if (!logger.hasTimer(description)) {
+    logger.startTimer(description);
   }
 
   return promise
-    .then(result => {
-  logger.endTimer(description)
-      logger.info(category, `✅ Succès: ${description}`)
-      return result
+    .then((result) => {
+      logger.endTimer(description);
+      logger.info(category, `✅ Succès: ${description}`);
+      return result;
     })
-    .catch(error => {
-  logger.endTimer(description)
-      logError(category, error, { description })
-      throw error
-    })
+    .catch((error) => {
+      logger.endTimer(description);
+      logError(category, error, { description });
+      throw error;
+    });
 }
 
-export default logger
+export default logger;

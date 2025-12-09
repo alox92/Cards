@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { container } from '@/application/Container'
 import { DECK_SERVICE_TOKEN, DeckService } from '@/application/services/DeckService'
 import { logger } from '@/utils/logger'
+import Icons from '@/ui/components/common/Icons'
 
 type StudyMode = 'quiz' | 'speed' | 'matching' | 'writing' | 'review'
 
@@ -40,28 +41,28 @@ const StudyPageSimple = () => {
       id: 'quiz' as StudyMode,
       title: 'Mode Quiz',
       description: 'Questions à choix multiples avec feedback immédiat',
-      icon: '📝',
+      icon: <Icons.File size="lg" />,
       color: 'bg-blue-500'
     },
     {
       id: 'speed' as StudyMode,
       title: 'Speed Round',
       description: 'Sessions chronométrées pour améliorer la rapidité',
-      icon: '⚡',
+      icon: <Icons.Zap size="lg" />,
       color: 'bg-yellow-500'
     },
     {
       id: 'matching' as StudyMode,
       title: 'Jeu d\'Association',
       description: 'Glisser-déposer pour créer des associations',
-      icon: '🎯',
+      icon: <Icons.Target size="lg" />,
       color: 'bg-green-500'
     },
     {
       id: 'writing' as StudyMode,
       title: 'Pratique Écrite',
       description: 'Saisie manuelle avec vérification intelligente',
-      icon: '✍️',
+      icon: <Icons.Edit size="lg" />,
       color: 'bg-purple-500'
     },
     {
@@ -80,7 +81,7 @@ const StudyPageSimple = () => {
     
     // Simulation d'une session d'étude
     setTimeout(() => {
-      alert(`Session d'étude ${mode} terminée ! 🎉\n\nCette fonctionnalité sera bientôt entièrement implémentée.`)
+      alert(`Session d'étude ${mode} terminée !\n\nCette fonctionnalité sera bientôt entièrement implémentée.`)
       setIsStudying(false)
       setSelectedMode(null)
     }, 3000)
@@ -121,8 +122,9 @@ const StudyPageSimple = () => {
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                🎓 Session d'Étude
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3">
+                <Icons.Study size="lg" />
+                <span>Session d'Étude</span>
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
                 {deckName 
@@ -134,9 +136,18 @@ const StudyPageSimple = () => {
     {deckName && (
               <div className="text-right">
                 <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-      <span>📚 {deckStats.totalCards} cartes</span>
-      <span>⭐ {deckStats.masteredCards} maîtrisées</span>
-      <span>🎯 {deckStats.totalCards ? Math.round((deckStats.masteredCards / deckStats.totalCards) * 100) : 0}% de réussite</span>
+      <span className="flex items-center gap-1">
+        <Icons.Decks size="xs" />
+        {deckStats.totalCards} cartes
+      </span>
+      <span className="flex items-center gap-1">
+        <Icons.Check size="xs" className="text-yellow-500" />
+        {deckStats.masteredCards} maîtrisées
+      </span>
+      <span className="flex items-center gap-1">
+        <Icons.Target size="xs" />
+        {deckStats.totalCards ? Math.round((deckStats.masteredCards / deckStats.totalCards) * 100) : 0}% de réussite
+      </span>
                 </div>
               </div>
             )}
@@ -145,7 +156,7 @@ const StudyPageSimple = () => {
           {availableCards.length === 0 && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
               <div className="flex items-center">
-                <span className="text-2xl mr-3">⚠️</span>
+                <span className="text-2xl mr-3"><Icons.Warning size="lg" className="text-yellow-600" /></span>
                 <div>
                   <h3 className="font-medium text-yellow-800 dark:text-yellow-200">
                     Aucune carte disponible
@@ -169,7 +180,9 @@ const StudyPageSimple = () => {
             className="text-center"
           >
             <div className="card max-w-md mx-auto">
-              <div className="text-4xl mb-4">📚</div>
+              <div className="text-4xl mb-4 flex justify-center">
+                <Icons.Decks size="xl" />
+              </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                 Sélectionnez un paquet
               </h3>
@@ -223,7 +236,10 @@ const StudyPageSimple = () => {
             className="mt-8 text-center"
           >
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white">
-              <h3 className="text-xl font-bold mb-2">🤖 IA d'Apprentissage Activée</h3>
+              <h3 className="text-xl font-bold mb-2 flex items-center gap-2 justify-center">
+                <Icons.Zap size="md" />
+                IA d'Apprentissage Activée
+              </h3>
               <p className="opacity-90">
                 L'algorithme SM-2 et les 7 systèmes d'optimisation analyseront vos performances 
                 pour adapter automatiquement la difficulté et optimiser votre rétention.

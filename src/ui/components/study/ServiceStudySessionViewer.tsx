@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import useServiceStudySession from '@/ui/hooks/useServiceStudySession'
+import Icons from '../common/Icons'
 
 export function ServiceStudySessionViewer({ deckId }: { deckId: string }) {
   const { loading, error, currentCard, remaining, answer, finished, session } = useServiceStudySession({ deckId })
@@ -19,7 +20,12 @@ export function ServiceStudySessionViewer({ deckId }: { deckId: string }) {
       <div className="text-xs text-gray-600 dark:text-gray-400">{session?.cardsStudied} cartes étudiées – {(session && session.cardsStudied)? Math.round((session.correctAnswers/session.cardsStudied)*100):0}% réussite</div>
     </div>
   )
-  if(!currentCard) return <div className="text-sm text-indigo-600">Aucune carte à étudier 🎉</div>
+  if(!currentCard) return (
+    <div className="text-sm text-indigo-600 flex items-center gap-2">
+      <Icons.Check size="sm" />
+      Aucune carte à étudier
+    </div>
+  )
 
   return (
     <div className="relative w-full max-w-md">

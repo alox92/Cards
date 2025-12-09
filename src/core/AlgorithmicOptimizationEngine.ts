@@ -114,7 +114,7 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
   private async initialize(): Promise<void> {
     if (this.isInitialized) return
 
-    console.log('⚡ Initialisation de l\'Algorithmic Optimization Engine...')
+    // Initialisation Algorithmic Optimization Engine
 
     // Créer les Web Workers
     if (this.config.enableWebWorkers) {
@@ -128,7 +128,7 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
     this.setupOptimizedAlgorithms()
 
     this.isInitialized = true
-    console.log('✅ Algorithmic Optimization Engine initialisé')
+    // Algorithmic Optimization Engine initialisé
   }
 
   /**
@@ -149,7 +149,7 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
       this.workers.set(workerId, worker)
     }
 
-    console.log(`🔧 ${this.config.maxWorkers} Web Workers créés`)
+    // Web Workers créés
   }
 
   /**
@@ -572,8 +572,8 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
   /**
    * Gère les erreurs des workers
    */
-  private handleWorkerError(workerId: string, error: ErrorEvent): void {
-    console.error(`Erreur dans le worker ${workerId}:`, error)
+  private handleWorkerError(workerId: string, _error: ErrorEvent): void {
+    // Erreur worker - redémarrage automatique
     
     // Redémarrer le worker si nécessaire
     this.recreateWorker(workerId)
@@ -598,7 +598,7 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
     newWorker.onerror = (error) => this.handleWorkerError(workerId, error)
     
     this.workers.set(workerId, newWorker)
-    console.log(`🔄 Worker ${workerId} recréé`)
+    // Worker recréé
   }
 
   /**
@@ -929,7 +929,7 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
    */
   public clearCache(): void {
     this.resultCache.clear()
-    console.log('🧹 Cache des résultats vidé')
+    // Cache des résultats vidé
   }
 
   /**
@@ -951,6 +951,6 @@ export class AlgorithmicOptimizationEngine extends EventTarget {
     this.activeTasks.clear()
     this.resultCache.clear()
 
-    console.log('🧹 Algorithmic Optimization Engine nettoyé')
+    // Algorithmic Optimization Engine nettoyé
   }
 }

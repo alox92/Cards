@@ -5,6 +5,8 @@ import { importDeckMultiFormat } from '@/application/import/deckMultiFormatImpor
 import { container } from '@/application/Container'
 import { MEDIA_REPOSITORY_TOKEN, DexieMediaRepository } from '@/infrastructure/persistence/dexie/DexieMediaRepository'
 import { useFeedback } from '@/ui/components/feedback/useFeedback'
+import Icons from '@/ui/components/common/Icons'
+import WorkspaceGlassLayout from '@/ui/components/layout/WorkspaceGlassLayout'
 
 // Heuristique: considérer "récemment modifié" si created >= now - delta
 const RECENT_DELTA_MS = 1000 * 60 * 60 * 24 * 7 // 7 jours
@@ -260,7 +262,8 @@ const MediaArchivePage: React.FC = () => {
   }, [feedback, mediaRepo])
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
+    <WorkspaceGlassLayout maxWidthClassName="max-w-3xl">
+      <div className="py-4 px-2 sm:py-6 sm:px-4">
       <h1 className="text-2xl font-semibold mb-4">Archive Médias</h1>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
         Export / import des cartes et médias avec checksums. Option export récent (7 jours). Intégrité double: taille & présence.
@@ -297,7 +300,10 @@ const MediaArchivePage: React.FC = () => {
             <button onClick={handleDeckImportClick} className="px-3 py-1.5 text-sm rounded bg-teal-600 hover:bg-teal-700 text-white">📥 Importer deck (multi-format)</button>
             <input ref={deckImportInputRef} type="file" accept=".csv,.txt,.json,.pdf,.xls,.xlsx,.apkg,.docx" className="hidden" onChange={handleDeckFileChange} />
             <div className="mt-2">
-              <button onClick={downloadDocxDeckTemplate} className="px-3 py-1.5 text-xs rounded bg-gray-600 hover:bg-gray-700 text-white">⬇️ Télécharger le modèle DOCX</button>
+              <button onClick={downloadDocxDeckTemplate} className="px-3 py-1.5 text-xs rounded bg-gray-600 hover:bg-gray-700 text-white flex items-center gap-2">
+                <Icons.Download size="xs" />
+                <span>Télécharger le modèle DOCX</span>
+              </button>
             </div>
             <details className="mt-3 text-[11px] text-gray-600 dark:text-gray-400">
               <summary className="cursor-pointer">Aide import formats</summary>
@@ -382,7 +388,7 @@ const MediaArchivePage: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
+    </WorkspaceGlassLayout>
   )
 }
 

@@ -49,7 +49,7 @@ export function useStudyQueue({ deckId, dailyNewLimit }: UseStudyQueueOptions) {
       // Use web worker for SM-2 calculation if enabled
       if (quality !== undefined && card.easinessFactor !== undefined) {
         try {
-          const sm2Result = await webWorkerManager.executeSpacedRepetition({
+          await webWorkerManager.executeSpacedRepetition({
             cardData: {
               easinessFactor: card.easinessFactor,
               interval: card.interval || 1,
@@ -58,9 +58,9 @@ export function useStudyQueue({ deckId, dailyNewLimit }: UseStudyQueueOptions) {
             quality
           })
           
-          console.log('✅ SM-2 calculation completed in worker:', sm2Result)
+          // SM-2 calculation completed
         } catch (workerError) {
-          console.warn('SM-2 worker calculation failed, using fallback:', workerError)
+          // SM-2 worker fallback silencieux
         }
       }
       
@@ -69,7 +69,7 @@ export function useStudyQueue({ deckId, dailyNewLimit }: UseStudyQueueOptions) {
         setQueue(q => q.filter(c => c.id !== card.id))
       })
     } catch (error) {
-      console.error('Failed to record answer:', error)
+      // Erreur enregistrement réponse
       throw error
     }
   }, [service, executeTransition])

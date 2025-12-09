@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import Icons from '../common/Icons'
 
 interface FlashCard3DProps {
   frontText: string
@@ -23,6 +24,11 @@ export const FlashCard3D = ({
   const [isFlipped, setIsFlipped] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [showParticles, setShowParticles] = useState(false)
+  const prefersReducedMotion = useReducedMotion()
+  const forceReducedMotion =
+    typeof document !== 'undefined' &&
+    document.documentElement.classList.contains('reduced-motion-force')
+  const reduceMotion = prefersReducedMotion || forceReducedMotion
 
   useEffect(() => {
     if (autoFlip) {
@@ -52,7 +58,8 @@ export const FlashCard3D = ({
     }
   }
 
-  const particlesArray = Array.from({ length: 20 }, (_, i) => (
+  const particlesArray = !reduceMotion
+    ? Array.from({ length: 20 }, (_, i) => (
     <motion.div
       key={i}
       className={`absolute w-2 h-2 rounded-full ${
@@ -82,13 +89,14 @@ export const FlashCard3D = ({
         top: '50%',
       }}
     />
-  ))
+    ))
+    : null
 
   return (
     <div className={`relative perspective-1000 ${className}`}>
       {/* Particules d'effet */}
       <AnimatePresence>
-        {showParticles && (
+        {showParticles && particlesArray && (
           <div className="absolute inset-0 pointer-events-none z-20">
             {particlesArray}
           </div>
@@ -141,25 +149,33 @@ export const FlashCard3D = ({
               </span>
               <div className="flex space-x-1">
                 {Array.from({ length: difficulty }).map((_, i) => (
-                  <motion.div
-                    key={i}
-                    className="w-2 h-2 bg-white rounded-full"
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 1, delay: i * 0.2, repeat: Infinity }}
-                  />
+                  reduceMotion ? (
+                    <div
+                      key={i}
+                      className="w-2 h-2 bg-white rounded-full"
+                    />
+                  ) : (
+                    <motion.div
+                      key={i}
+                      className="w-2 h-2 bg-white rounded-full"
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1, delay: i * 0.2, repeat: Infinity }}
+                    />
+                  )
                 ))}
               </div>
             </div>
 
             <div className="text-center flex-1 flex items-center justify-center">
               <motion.h2 
+              <motion.h2 
                 className="text-3xl font-bold leading-tight drop-shadow-lg"
-                animate={{ 
+                animate={reduceMotion ? undefined : { 
                   textShadow: isHovered 
                     ? "0 0 20px rgba(255,255,255,0.8)" 
                     : "0 2px 4px rgba(0,0,0,0.3)" 
                 }}
-                transition={{ duration: 0.3 }}
+                transition={reduceMotion ? undefined : { duration: 0.3 }}
               >
                 {frontText}
               </motion.h2>
@@ -167,17 +183,22 @@ export const FlashCard3D = ({
 
             <div className="text-center">
               <motion.div 
+              <motion.div 
                 className="inline-flex items-center space-x-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full"
-                animate={{ y: [0, -5, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
+                animate={reduceMotion ? undefined : { y: [0, -5, 0] }}
+                transition={reduceMotion ? undefined : { duration: 2, repeat: Infinity }}
               >
                 <span className="text-sm font-medium">Cliquez pour révéler</span>
-                <motion.span 
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                >
-                  🔄
-                </motion.span>
+                {reduceMotion ? (
+                  <span>🔄</span>
+                ) : (
+                  <motion.span 
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  >
+                    🔄
+                  </motion.span>
+                )}
               </motion.div>
             </div>
           </div>
@@ -251,7 +272,10 @@ export const FlashCard3D = ({
                   whileHover={{ scale: 1.1, rotate: -2 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  ❌ Difficile
+                  <span className="flex items-center gap-2">
+                    <Icons.Cancel size="sm" />
+                    Difficile
+                  </span>
                 </motion.button>
                 <motion.button
                   onClick={(e) => {
@@ -264,7 +288,10 @@ export const FlashCard3D = ({
                   whileHover={{ scale: 1.1, rotate: 2 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  ✅ Facile
+                  <span className="flex items-center gap-2">
+                    <Icons.Check size="sm" />
+                    Facile
+                  </span>
                 </motion.button>
               </motion.div>
             )}

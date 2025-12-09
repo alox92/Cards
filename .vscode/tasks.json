@@ -1,49 +1,402 @@
 {
+	"$schema": "vscode://schemas/tasks",
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Install Dependencies",
-			"type": "shell",
-			"command": "npm install",
+			"label": "npm: dev",
+			"type": "npm",
+			"script": "dev",
 			"group": "build",
-			"isBackground": false,
-			"problemMatcher": [],
-			"presentation": {
-				"echo": true,
-				"reveal": "always",
-				"focus": false,
-				"panel": "shared",
-				"showReuseMessage": true,
-				"clear": false
-			}
+			"problemMatcher": [
+				"$tsc"
+			],
+			"detail": "Start Vite dev server"
 		},
 		{
-			"label": "Install Dependencies",
-			"type": "shell",
-			"command": "npm install",
-			"isBackground": false,
-			"group": "build"
+			"label": "npm: build",
+			"type": "npm",
+			"script": "build",
+			"group": "build",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"detail": "Type-check and build with Vite"
 		},
 		{
-			"label": "Install Dependencies",
-			"type": "shell",
-			"command": "npm install",
-			"isBackground": false,
-			"group": "build"
+			"label": "npm: test (run)",
+			"type": "npm",
+			"script": "test:run",
+			"problemMatcher": [
+				"$tsc"
+			]
 		},
 		{
-			"label": "Install Dependencies",
-			"type": "shell",
-			"command": "npm install",
-			"isBackground": false,
-			"group": "build"
+			"label": "npm: test (fast)",
+			"type": "npm",
+			"script": "test:fast",
+			"problemMatcher": [
+				"$tsc"
+			]
 		},
 		{
-			"label": "Install Dependencies",
+			"label": "npm: e2e",
 			"type": "shell",
-			"command": "npm install",
-			"isBackground": false,
-			"group": "build"
+			"command": "npx playwright test",
+			"options": {
+				"env": {
+					"E2E_BASE_URL": "http://127.0.0.1:5173"
+				}
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "npm: perf:smoke",
+			"type": "npm",
+			"script": "perf:smoke",
+			"problemMatcher": []
+		},
+		{
+			"label": "test LocalCardRepository",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/infrastructure/persistence/LocalCardRepository.test.ts"
+		},
+		{
+			"label": "test LocalDeckRepository",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/infrastructure/persistence/LocalDeckRepository.test.ts"
+		},
+		{
+			"label": "test LocalStudySessionRepository",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/infrastructure/persistence/LocalStudySessionRepository.test.ts"
+		},
+		{
+			"label": "test recordReview",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/domain/usecases/review/recordReview.test.ts"
+		},
+		{
+			"label": "test SM5",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/domain/algorithms/sm5.test.ts"
+		},
+		{
+			"label": "test MCQCardEntity",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/domain/entities/MCQCardEntity.test.ts"
+		},
+		{
+			"label": "test MCQCardEntity",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/domain/entities/MCQCardEntity.test.ts"
+		},
+		{
+			"label": "run all tests",
+			"type": "shell",
+			"command": "npx vitest run"
+		},
+		{
+			"label": "test DexieCardRepository",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/infrastructure/persistence/dexie/DexieCardRepository.test.ts"
+		},
+		{
+			"label": "test DexieDeckRepository",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/infrastructure/persistence/dexie/DexieDeckRepository.test.ts"
+		},
+		{
+			"label": "test DexieStudySessionRepository",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/infrastructure/persistence/dexie/DexieStudySessionRepository.test.ts"
+		},
+		{
+			"label": "test DexieMediaRepository",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/infrastructure/persistence/dexie/DexieMediaRepository.test.ts"
+		},
+		{
+			"label": "test DexieMediaRepository",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/infrastructure/persistence/dexie/DexieMediaRepository.test.ts"
+		},
+		{
+			"label": "test DexieMediaRepository",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/infrastructure/persistence/dexie/DexieMediaRepository.test.ts"
+		},
+		{
+			"label": "test DexieMediaRepository",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/infrastructure/persistence/dexie/DexieMediaRepository.test.ts"
+		},
+		{
+			"label": "test DexieMediaRepository",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/infrastructure/persistence/dexie/DexieMediaRepository.test.ts"
+		},
+		{
+			"label": "test DexieMediaRepository",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/infrastructure/persistence/dexie/DexieMediaRepository.test.ts"
+		},
+		{
+			"label": "test GamificationBridge",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/application/integration/gamificationBridge.test.ts"
+		},
+		{
+			"label": "test Container",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/application/Container.test.ts"
+		},
+		{
+			"label": "test ServiceError",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/application/services/base/ServiceError.test.ts"
+		},
+		{
+			"label": "test BaseService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/application/services/base/BaseService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test BaseService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/application/services/base/BaseService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test BaseService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/application/services/base/BaseService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test BaseService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/application/services/base/BaseService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test BaseService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/application/services/base/BaseService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test CardService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/services/CardService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test DeckService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/services/DeckService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test StudySessionService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/studySessionService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test MediaService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/services/MediaService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test SearchService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/services/SearchService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test StatisticsService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/statisticsService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test ThemeService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/services/ThemeService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test SuggestionService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/services/SuggestionService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test InsightService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/services/InsightService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test HeatmapStatsService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/services/HeatmapStatsService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test LearningForecastService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/services/LearningForecastService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test AgendaScheduler",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/services/AgendaScheduler.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test AdaptiveStudyScorer",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/services/AdaptiveStudyScorer.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test AdaptiveOrchestratorService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/adaptiveOrchestrator.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test SearchIndexService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/services/SearchIndexService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test SpacedRepetitionService",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/services/SpacedRepetitionService.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test validators",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/services/base/validators.test.ts",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "run all tests",
+			"type": "shell",
+			"command": "npx vitest run",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test useCards",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/ui/hooks/useCards.test.tsx",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test useDecks",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/ui/hooks/useDecks.test.tsx",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test useServiceStudySession",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/ui/hooks/useServiceStudySession.test.tsx",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test useServiceStudySession",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/ui/hooks/useServiceStudySession.test.tsx",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test useStudyQueue",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/ui/hooks/useStudyQueue.test.tsx",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test useStudyQueue",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/ui/hooks/useStudyQueue.test.tsx",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test useLearningProfile",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/ui/hooks/useLearningProfile.test.tsx",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test useLearningProfile",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/ui/hooks/useLearningProfile.test.tsx",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test useGamification",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/ui/hooks/useGamification.test.tsx",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test useTheme",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/ui/hooks/useTheme.test.tsx",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "run all tests",
+			"type": "shell",
+			"command": "npx vitest run",
+			"args": [],
+			"group": "test"
+		},
+		{
+			"label": "test recordReview",
+			"type": "shell",
+			"command": "npx vitest run src/__tests__/domain/usecases/review/recordReview.test.ts"
 		}
 	]
 }

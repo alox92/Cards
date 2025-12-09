@@ -7,6 +7,7 @@ import GlobalSearchBar from '@/ui/components/Search/GlobalSearchBar'
 import { PERFORMANCE_STYLES, TIMING_CONFIGS } from '@/utils/performanceOptimizer'
 import { logger } from '@/utils/logger'
 import useGlobalStats from '@/ui/hooks/useGlobalStats'
+import Icons from '@/ui/components/common/Icons'
 
 interface CommandCenterBarProps {
   focusMode: boolean
@@ -22,7 +23,7 @@ interface CommandCenterBarProps {
 
 interface QuickAction {
   id: string
-  icon: string
+  icon: ReactNode
   label: string
   description?: string
   active?: boolean
@@ -138,7 +139,7 @@ export const CommandCenterBar = memo(function CommandCenterBar({
   const quickActions = useMemo<QuickAction[]>(() => [
     {
       id: 'focusMode',
-      icon: focusMode ? '🧘' : '🎯',
+      icon: focusMode ? <Icons.Target size="sm" /> : <Icons.Target size="sm" />,
       label: focusMode ? 'Quitter le focus' : 'Mode focus',
       description: focusMode
         ? 'Restaure la navigation et les widgets'
@@ -148,7 +149,7 @@ export const CommandCenterBar = memo(function CommandCenterBar({
     },
     {
       id: 'toggleTheme',
-      icon: theme === 'dark' ? '🌞' : '🌙',
+      icon: theme === 'dark' ? <Icons.Settings size="sm" /> : <Icons.Settings size="sm" />,
       label: theme === 'dark' ? 'Mode clair' : 'Mode sombre',
       description: theme === 'dark'
         ? 'Augmente la luminosité pour analyser les cartes'
@@ -165,28 +166,28 @@ export const CommandCenterBar = memo(function CommandCenterBar({
     return [
       {
         id: 'dueToday',
-        icon: '⏰',
+        icon: <Icons.Clock size="sm" />,
         label: 'À réviser aujourd’hui',
         value: numberFormatter.format(snapshot.dueToday),
         tone: dueTone
       },
       {
         id: 'reviewsToday',
-        icon: '🔁',
+        icon: <Icons.Refresh size="sm" />,
         label: 'Revues du jour',
         value: numberFormatter.format(snapshot.reviewsToday),
         tone: snapshot.reviewsToday >= snapshot.newCardsToday ? 'primary' : 'warning'
       },
       {
         id: 'retention',
-        icon: '📈',
+        icon: <Icons.TrendUp size="sm" />,
         label: 'Rétention globale',
         value: percentFormatter.format(Math.max(0, Math.min(1, snapshot.averageRetention || 0))),
         tone: snapshot.averageRetention >= 0.85 ? 'success' : snapshot.averageRetention >= 0.7 ? 'primary' : 'warning'
       },
       {
         id: 'streak',
-        icon: '🔥',
+        icon: <Icons.Zap size="sm" />,
         label: 'Streak actif',
         value: `${numberFormatter.format(snapshot.currentStreak)} j`,
         tone: snapshot.currentStreak >= 5 ? 'success' : 'primary'
@@ -287,7 +288,9 @@ export const CommandCenterBar = memo(function CommandCenterBar({
                   <QuickActionButton key={action.id} action={action} disableMotion={!!reduceMotion} />
                 ))}
                 <div className="group flex min-w-[160px] items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-gray-700 glass-tile text-left">
-                  <span className="text-lg" aria-hidden>🎨</span>
+                  <span className="flex items-center" aria-hidden>
+                    <Icons.Image size="md" />
+                  </span>
                   <div className="flex flex-1 flex-col">
                     <label htmlFor="command-center-theme" className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
                       Preset

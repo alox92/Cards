@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { getFluidTransitionMastery, FluidTransitionMastery } from '../../../core/FluidTransitionMastery'
 import { logger } from '@/utils/logger'
+import Icons from '../../components/common/Icons'
 
 interface GamificationProps {
   onLevelUp?: (newLevel: number) => void
@@ -19,7 +20,7 @@ interface Achievement {
   id: string
   title: string
   description: string
-  icon: string
+  icon: React.ReactNode
   xpReward: number
   rarity: 'common' | 'rare' | 'epic' | 'legendary'
   category: string
@@ -149,7 +150,7 @@ export const GamificationSystem: React.FC<GamificationProps> = ({
         id: 'quick-learner',
         title: 'Apprenant Rapide',
         description: 'Répondez correctement à 10 cartes en moins de 5 secondes chacune',
-        icon: '⚡',
+        icon: <Icons.Zap size="md" />,
         xpReward: 50,
         rarity: 'rare',
         category: 'Vitesse',
@@ -160,7 +161,7 @@ export const GamificationSystem: React.FC<GamificationProps> = ({
         id: 'streak-master',
         title: 'Maître des Séries',
         description: 'Maintenez un streak de 30 jours',
-        icon: '🔥',
+        icon: <Icons.Zap size="md" />,
         xpReward: 200,
         rarity: 'epic',
         category: 'Consistance',
@@ -496,7 +497,10 @@ export const GamificationSystem: React.FC<GamificationProps> = ({
   return (
     <div className={`gamification-system ${compact ? 'compact' : ''} ${collapsed ? 'collapsed' : ''}`} ref={containerRef}>
       <div className="gamification-header" style={{pointerEvents:'auto'}}>
-        <span className="title">🎮 Gamification</span>
+        <span className="title flex items-center gap-2">
+          <Icons.Zap size="sm" />
+          Gamification
+        </span>
         <div className="actions">
           <button onClick={() => setCollapsed(c=>!c)} className="btn-min" title={collapsed ? 'Développer' : 'Réduire'}>{collapsed ? '▢' : '—'}</button>
         </div>
@@ -506,7 +510,10 @@ export const GamificationSystem: React.FC<GamificationProps> = ({
         <div className="level-display">
           <span className="level-badge">Niveau {levelInfo.level}</span>
           {levelInfo.prestige > 0 && (
-            <span className="prestige-badge">⭐ {levelInfo.prestige}</span>
+            <span className="prestige-badge flex items-center gap-1">
+              <Icons.Zap size="xs" className="text-yellow-500" />
+              {levelInfo.prestige}
+            </span>
           )}
         </div>
         
@@ -535,7 +542,7 @@ export const GamificationSystem: React.FC<GamificationProps> = ({
 
       {/* Indicateur de streak */}
       <div className="streak-indicator">
-        <div className="streak-fire">🔥</div>
+        <div className="streak-fire"><Icons.Zap size="md" className="text-orange-500" /></div>
         <div className="streak-info">
           <div className="streak-current">{streak.current} jours</div>
           <div className="streak-multiplier">×{streak.multiplier.toFixed(1)} XP</div>
@@ -565,7 +572,11 @@ export const GamificationSystem: React.FC<GamificationProps> = ({
             <div className="level-up-number">Niveau {levelInfo.level}</div>
             <div className="level-up-effects">
               <div className="confetti"></div>
-              <div className="sparkles">✨✨✨</div>
+              <div className="sparkles flex gap-2">
+                <Icons.Zap size="sm" className="text-yellow-400" />
+                <Icons.Zap size="sm" className="text-yellow-400" />
+                <Icons.Zap size="sm" className="text-yellow-400" />
+              </div>
             </div>
           </div>
         </div>

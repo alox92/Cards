@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStudyQueue } from '@/ui/hooks/useStudyQueue'
 import { useState } from 'react'
+import Icons from '../common/Icons'
 
 export function StudyQueueViewer({ deckId }: { deckId: string }) {
   const { queue, loading, error, record } = useStudyQueue({ deckId, dailyNewLimit: 15 })
@@ -8,7 +9,12 @@ export function StudyQueueViewer({ deckId }: { deckId: string }) {
 
   if (loading) return <div className="text-sm text-gray-500">Préparation de la session...</div>
   if (error) return <div className="text-sm text-red-500">{error}</div>
-  if (!queue.length) return <div className="text-sm text-emerald-600">Plus de cartes pour l'instant 🎉</div>
+  if (!queue.length) return (
+    <div className="text-sm text-emerald-600 flex items-center gap-2">
+      <Icons.Check size="sm" />
+      Plus de cartes pour l'instant
+    </div>
+  )
 
   const current = queue[0]
 

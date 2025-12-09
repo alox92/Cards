@@ -1,526 +1,248 @@
-import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { DemoCard } from '@/ui/components/Card/DemoCard'
-import { useState, useEffect } from 'react'
-import useDecksService from '@/ui/hooks/useDecksService'
-import { motion as m } from 'framer-motion'
+import { Link, useNavigate } from "react-router-dom";
+import { DemoCard } from "@/ui/components/Card/DemoCard";
+import useDecksService from "@/ui/hooks/useDecksService";
+import Icons from "@/ui/components/common/Icons";
 
-const HomePage = () => {
-  const navigate = useNavigate()
-  const [currentFeature, setCurrentFeature] = useState(0)
-  const [showWelcome, setShowWelcome] = useState(true)
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShowWelcome(false), 3000)
-    return () => clearTimeout(timer)
-  }, [])
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentFeature(prev => (prev + 1) % features.length)
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const handleStartLearning = () => {
-    navigate('/study')
-  }
-
-  const handleExploreDecks = () => {
-    navigate('/decks')
-  }
-
-  const handleViewStats = () => {
-    navigate('/stats')
-  }
-
-  const handleOpenSettings = () => {
-    navigate('/settings')
-  }
-
-  const demoCard = {
-    frontText: 'Hello',
-    backText: 'Bonjour / Salut',
-    category: 'Vocabulaire Anglais',
-    difficulty: 1
-  }
-
-  // Decks récents
-  const { decks, loading: decksLoading } = useDecksService()
-  const recentDecks = [...decks].sort((a:any,b:any)=> (b.lastStudied||0) - (a.lastStudied||0)).slice(0,4)
-
-  const features = [
-    {
-      icon: '🧠',
-      title: 'IA d\'Apprentissage',
-      description: 'Algorithme SM-2 pour optimiser vos révisions',
-      color: 'from-blue-400 to-purple-500'
-    },
-    {
-      icon: '📊',
-      title: 'Statistiques Avancées',
-      description: 'Suivez vos progrès en temps réel',
-      color: 'from-green-400 to-teal-500'
-    },
-    {
-      icon: '🎯',
-      title: 'Modes de Jeu',
-      description: 'Quiz, Speed Round, Matching et plus',
-      color: 'from-orange-400 to-red-500'
-    },
-    {
-      icon: '🎨',
-      title: 'Interface Moderne',
-      description: 'Design responsive avec mode sombre',
-      color: 'from-pink-400 to-purple-500'
-    },
-    {
-      icon: '⚡',
-      title: 'Performance',
-      description: '7 systèmes d\'optimisation intégrés',
-      color: 'from-yellow-400 to-orange-500'
-    },
-    {
-      icon: '📱',
-      title: 'PWA Ready',
-      description: 'Fonctionne hors ligne sur tous vos appareils',
-      color: 'from-indigo-400 to-blue-500'
-    }
-  ]
+export default function HomePageOptimized() {
+  const navigate = useNavigate();
+  const { decks, loading } = useDecksService();
+  const recent = [...decks]
+    .sort((a: any, b: any) => (b.lastStudied || 0) - (a.lastStudied || 0))
+    .slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-gray-900 dark:to-gray-800 relative overflow-hidden">
-      {/* Écran de bienvenue avec effet spectaculaire */}
-      <AnimatePresence>
-        {showWelcome && (
-          <motion.div
-            initial={{ opacity: 1, scale: 1 }}
-            exit={{ 
-              opacity: 0, 
-              scale: 0.8,
-              y: -50,
-              rotateX: 90
-            }}
-            transition={{ duration: 1, ease: "backInOut" }}
-            className="fixed inset-0 z-50 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center"
-          >
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ 
-                duration: 1.5, 
-                ease: "backOut",
-                type: "spring",
-                stiffness: 200
-              }}
-              className="text-center"
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-fuchsia-800 to-orange-600 dark:from-purple-950 dark:via-fuchsia-950 dark:to-orange-950 animate-gradient-x">
+      {/* Hero Section - MEGA ULTRA FLASHY */}
+      <div className="container mx-auto px-4 py-20 text-center relative">
+        {/* Effet de lumière flottante */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-1/4 w-96 h-96 bg-yellow-400/30 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-cyan-400/30 rounded-full blur-3xl animate-pulse delay-700"></div>
+        </div>
+
+        <div className="relative bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-2xl border-4 border-white/40 rounded-[2.5rem] p-16 shadow-[0_0_80px_rgba(255,255,255,0.3)] mb-12 hover:scale-105 transition-transform duration-500">
+          <h1 className="text-9xl font-black mb-8 bg-gradient-to-r from-yellow-300 via-orange-400 to-purple-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(255,255,255,0.8)] animate-pulse">
+            ⚡ ARIBA CARDS ⚡
+          </h1>
+          <p className="text-4xl font-black bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-400 bg-clip-text text-transparent mb-10 drop-shadow-2xl animate-bounce">
+            🚀 MAÎTRISEZ VOS CONNAISSANCES AVEC L'IA 🎯
+          </p>
+          <div className="flex gap-8 justify-center mb-10 flex-wrap">
+            <Link
+              to="/study-workspace"
+              className="relative group perspective-1000"
             >
-              <motion.div
-                animate={{ 
-                  rotateY: 360,
-                  scale: [1, 1.2, 1]
-                }}
-                transition={{ 
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "linear"
-                }}
-                className="w-32 h-32 mx-auto mb-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-6xl animate-glow-pulse"
-              >
-                🎓
-              </motion.div>
-              
-              <motion.h1
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.8 }}
-                className="text-6xl font-bold text-gradient mb-4"
-              >
-                Cards
-              </motion.h1>
-              
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1, duration: 0.6 }}
-                className="text-xl text-white/80 max-w-2xl mx-auto"
-              >
-                Préparez-vous à une expérience d'apprentissage révolutionnaire
-              </motion.p>
-              
-              <motion.div
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1.5, duration: 0.5 }}
-                className="mt-8"
-              >
-                <div className="w-2 h-2 bg-white rounded-full mx-auto animate-pulse"></div>
-              </motion.div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Particules d'arrière-plan */}
-      <div className="absolute inset-0 overflow-hidden">
-        {Array.from({ length: 30 }, (_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-blue-400/30 rounded-full"
-            animate={{
-              x: [0, Math.random() * 200 - 100],
-              y: [0, Math.random() * 200 - 100],
-              opacity: [0.3, 1, 0.3],
-              scale: [1, 2, 1]
-            }}
-            transition={{
-              duration: Math.random() * 4 + 2,
-              repeat: Infinity,
-              delay: Math.random() * 2
-            }}
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
-          />
-        ))}
-      </div>
-
-      <div className="container mx-auto px-4 py-8 relative z-10">
-        {/* Header spectaculaire avec animation */}
-        <motion.div
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: showWelcome ? 3.5 : 0 }}
-          className="text-center mb-12"
-        >
-          <motion.h1
-            className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-4"
-            animate={{ 
-              backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
-            }}
-            transition={{ duration: 6, repeat: Infinity }}
-            style={{
-              background: 'linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab)',
-              backgroundSize: '400% 400%',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}
-          >
-            Bienvenue sur{' '}
-            <span className="inline-block animate-float-3d">
-              Cards
-            </span>
-          </motion.h1>
-          
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: showWelcome ? 4 : 0.5, duration: 0.8 }}
-            className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8"
-          >
-            Application de cartes flash intelligente avec{' '}
-            <span className="text-gradient font-bold">7 systèmes d'optimisation révolutionnaires</span>{' '}
-            pour un apprentissage adaptatif et performant
-          </motion.p>
-
-          {/* Boutons d'action avec effets magiques */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: showWelcome ? 4.5 : 1, duration: 0.6 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
-          >
-            <motion.button 
-              onClick={handleStartLearning}
-              className="btn-magical btn-ultra-smooth game-btn-ultra text-lg px-8 py-4 relative overflow-hidden group"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <span className="relative z-10 flex items-center space-x-2">
-                <span>🚀</span>
-                <span>Commencer à Apprendre</span>
-              </span>
-            </motion.button>
-            
-            <motion.button 
-              onClick={handleExploreDecks}
-              className="btn-secondary btn-ultra-smooth game-btn-ultra text-lg px-8 py-4 transform hover:scale-105 transition-all duration-300 hover-3d-lift"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <span className="flex items-center space-x-2">
-                <span>📚</span>
-                <span>Explorer les Paquets</span>
-              </span>
-            </motion.button>
-          </motion.div>
-        </motion.div>
-
-        {/* Carte de démonstration avec rotation 3D */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, rotateY: -90 }}
-          animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-          transition={{ delay: showWelcome ? 5 : 1.5, duration: 1, ease: "backOut" }}
-          className="max-w-md mx-auto mb-16 perspective-1000"
-        >
-          <motion.div
-            animate={{ 
-              rotateY: [0, 5, 0, -5, 0],
-              y: [0, -10, 0, -5, 0]
-            }}
-            transition={{ 
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-            className="relative"
-          >
-            <h2 className="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-white">
-              <span className="text-gradient">🎯 Essayez notre système</span>
-            </h2>
-            <div className="hover-3d-lift">
-              <DemoCard {...demoCard} />
-            </div>
-          </motion.div>
-        </motion.div>
-
-        {/* Grille des fonctionnalités avec carrousel */}
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: showWelcome ? 5.5 : 2, duration: 0.8 }}
-          className="max-w-6xl mx-auto mb-16"
-        >
-          <motion.h2
-            className="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-white"
-            animate={{ 
-              scale: [1, 1.02, 1],
-              textShadow: [
-                "0 0 20px rgba(59, 130, 246, 0.3)",
-                "0 0 40px rgba(139, 92, 246, 0.5)",
-                "0 0 20px rgba(59, 130, 246, 0.3)"
-              ]
-            }}
-            transition={{ duration: 3, repeat: Infinity }}
-          >
-            ✨ Fonctionnalités Révolutionnaires
-          </motion.h2>
-          
-          {/* Fonctionnalité mise en avant */}
-          <motion.div
-            key={currentFeature}
-            initial={{ opacity: 0, x: 100, rotateY: 90 }}
-            animate={{ opacity: 1, x: 0, rotateY: 0 }}
-            exit={{ opacity: 0, x: -100, rotateY: -90 }}
-            transition={{ duration: 0.8, ease: "backOut" }}
-            className="card p-8 mb-8 text-center"
-          >
-            <motion.div
-              animate={{ 
-                rotate: 360,
-                scale: [1, 1.2, 1]
-              }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="text-6xl mb-4"
-            >
-              {features[currentFeature].icon}
-            </motion.div>
-            <h3 className="text-2xl font-bold text-gradient mb-4">
-              {features[currentFeature].title}
-            </h3>
-            <p className="text-lg text-gray-600 dark:text-gray-300">
-              {features[currentFeature].description}
-            </p>
-          </motion.div>
-          
-          {/* Grille de toutes les fonctionnalités */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => (
-              <motion.div 
-                key={index}
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: showWelcome ? 6 + index * 0.1 : 2.5 + index * 0.1 }}
-                className={`card cursor-pointer transition-all duration-300 ${
-                  index === currentFeature ? 'ring-2 ring-blue-400 scale-105' : ''
-                }`}
-                onClick={() => setCurrentFeature(index)}
-                whileHover={{ scale: 1.05, rotateY: 10 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <motion.div
-                  animate={index === currentFeature ? { 
-                    rotate: [0, 10, -10, 0],
-                    scale: [1, 1.1, 1]
-                  } : {}}
-                  transition={{ duration: 1, repeat: index === currentFeature ? Infinity : 0 }}
-                  className="text-4xl mb-4"
-                >
-                  {feature.icon}
-                </motion.div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  {feature.description}
-                </p>
-              </motion.div>
-            ))}
+              <div className="absolute inset-0 bg-gradient-to-r from-yellow-300 via-orange-400 to-red-500 rounded-3xl blur-xl opacity-75 group-hover:opacity-100 animate-pulse"></div>
+              <div className="relative bg-gradient-to-br from-yellow-400 via-orange-500 to-red-600 text-white px-16 py-8 rounded-3xl font-black text-3xl shadow-2xl hover:shadow-[0_0_80px_rgba(251,191,36,1)] hover:scale-125 hover:-rotate-2 transition-all duration-500 border-[6px] border-white group-hover:border-yellow-200">
+                <span className="relative z-10 drop-shadow-lg flex items-center gap-3">
+                  <Icons.Study size="md" />
+                  <span>Commencer maintenant</span>
+                </span>
+              </div>
+            </Link>
+            <Link to="/decks" className="relative group perspective-1000">
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-300 via-teal-400 to-cyan-500 rounded-3xl blur-xl opacity-75 group-hover:opacity-100 animate-pulse"></div>
+              <div className="relative bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600 text-white px-16 py-8 rounded-3xl font-black text-3xl shadow-2xl hover:shadow-[0_0_80px_rgba(20,184,166,1)] hover:scale-125 hover:rotate-2 transition-all duration-500 border-[6px] border-white group-hover:border-cyan-200">
+                <span className="relative z-10 drop-shadow-lg flex items-center gap-3">
+                  <Icons.Decks size="md" />
+                  <span>Mes paquets</span>
+                </span>
+              </div>
+            </Link>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Actions rapides avec animations 3D */}
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: showWelcome ? 6.5 : 3, duration: 0.8 }}
-          className="max-w-4xl mx-auto mb-16"
-        >
-          <h2 className="text-3xl font-bold text-center mb-8 text-gradient">
-            🎮 Actions Rapides
+        {/* Demo Card - MEGA SPECTACULAIRE */}
+        <div className="max-w-2xl mx-auto mb-24 relative group">
+          <div className="absolute -inset-4 bg-gradient-to-r from-yellow-400 via-pink-500 to-blue-600 rounded-[3rem] blur-2xl opacity-75 group-hover:opacity-100 animate-pulse"></div>
+          <div className="relative p-3 rounded-[2.5rem] bg-gradient-to-r from-yellow-300 via-orange-400 to-purple-600 shadow-[0_0_80px_rgba(251,191,36,1)] animate-gradient-x">
+            <div className="bg-gradient-to-br from-blue-600 via-purple-700 to-fuchsia-600 rounded-[2rem] p-12 border-[6px] border-yellow-300 hover:border-white transition-all duration-500 hover:scale-105">
+              <p className="text-4xl font-black mb-6 bg-gradient-to-r from-yellow-200 via-orange-300 to-pink-300 bg-clip-text text-transparent drop-shadow-2xl animate-bounce">
+                ✨ CARTE MAGIQUE INTERACTIVE ✨
+              </p>
+              <DemoCard frontText="Hello" backText="Bonjour / Salut" />
+            </div>
+          </div>
+        </div>
+
+        {/* Features - EXPLOSION DE COULEURS ET ANIMATIONS */}
+        <div className="mb-24">
+          <h2 className="text-7xl font-black text-center mb-16 bg-gradient-to-r from-yellow-300 via-pink-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-2xl animate-pulse">
+            🌟 FONCTIONNALITÉS EXTRAORDINAIRES 🌟
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <motion.div 
-              onClick={handleViewStats}
-              className="card cursor-pointer group"
-              whileHover={{ scale: 1.02, rotateY: 5, rotateX: 5 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <div className="text-center">
-                <motion.div
-                  animate={{ 
-                    rotateY: 360,
-                    scale: [1, 1.1, 1]
-                  }}
-                  transition={{ duration: 4, repeat: Infinity }}
-                  className="text-5xl mb-4 group-hover:animate-bounce-in-3d"
-                >
-                  📈
-                </motion.div>
-                <h3 className="text-xl font-semibold text-gradient mb-2">
-                  Statistiques Avancées
+          <div className="grid md:grid-cols-3 gap-10">
+            <div className="relative group perspective-1000">
+              <div className="absolute -inset-2 bg-gradient-to-r from-blue-400 to-cyan-500 rounded-[2rem] blur-xl opacity-50 group-hover:opacity-100 animate-pulse"></div>
+              <div className="relative bg-gradient-to-br from-blue-400 via-cyan-400 to-teal-400 rounded-[2rem] p-10 shadow-[0_0_60px_rgba(59,130,246,1)] hover:shadow-[0_0_100px_rgba(59,130,246,1)] hover:scale-110 hover:-rotate-6 transition-all duration-500 border-[6px] border-white cursor-pointer transform-gpu">
+                <div className="absolute -top-6 -right-6 bg-gradient-to-r from-yellow-300 to-orange-400 text-blue-900 px-6 py-3 rounded-full font-black text-xl rotate-12 shadow-2xl animate-bounce border-4 border-white">
+                  NEW! 🎉
+                </div>
+                <div className="bg-white/30 backdrop-blur-md rounded-3xl p-6 w-24 h-24 flex items-center justify-center mb-6 mx-auto text-6xl shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                  <Icons.Sparkles size="xl" />
+                </div>
+                <h3 className="text-4xl font-black mb-5 text-white text-center drop-shadow-2xl">
+                  IA AVANCÉE
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Consultez vos performances et progrès détaillés
+                <p className="text-white font-black text-center text-xl leading-relaxed">
+                  Algorithme SM-2 adaptatif qui booste votre mémoire!
                 </p>
               </div>
-            </motion.div>
-
-            <motion.div 
-              onClick={handleOpenSettings}
-              className="card cursor-pointer group"
-              whileHover={{ scale: 1.02, rotateY: -5, rotateX: 5 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <div className="text-center">
-                <motion.div
-                  animate={{ 
-                    rotate: [0, 90, 180, 270, 360],
-                    scale: [1, 1.1, 1]
-                  }}
-                  transition={{ duration: 6, repeat: Infinity }}
-                  className="text-5xl mb-4 group-hover:animate-bounce-in-3d"
-                >
-                  ⚙️
-                </motion.div>
-                <h3 className="text-xl font-semibold text-gradient mb-2">
-                  Paramètres
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Personnalisez votre expérience d'apprentissage
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        </motion.div>
-
-        {/* Résumé decks récents */}
-        <motion.div
-          initial={{ opacity:0, y:40 }}
-          animate={{ opacity:1, y:0 }}
-          transition={{ delay: showWelcome ? 6.8 : 3.3, duration:0.6 }}
-          className="max-w-5xl mx-auto mb-20"
-        >
-          <h2 className="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-white">📚 Paquets Récents</h2>
-          {decksLoading && <div className="text-center text-sm text-gray-500 dark:text-gray-400">Chargement...</div>}
-          {!decksLoading && recentDecks.length === 0 && (
-            <div className="card p-6 text-center">
-              <p className="text-gray-600 dark:text-gray-400 mb-4">Aucun paquet encore. Créez votre premier pour commencer l'aventure !</p>
-              <button onClick={handleExploreDecks} className="btn-primary">➕ Nouveau paquet</button>
             </div>
-          )}
-          {!decksLoading && recentDecks.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {recentDecks.map((d)=>(
-                <m.button
+            <div className="relative group perspective-1000">
+              <div className="absolute -inset-2 bg-gradient-to-r from-green-400 to-emerald-500 rounded-[2rem] blur-xl opacity-50 group-hover:opacity-100 animate-pulse"></div>
+              <div className="relative bg-gradient-to-br from-green-400 via-emerald-400 to-lime-400 rounded-[2rem] p-10 shadow-[0_0_60px_rgba(34,197,94,1)] hover:shadow-[0_0_100px_rgba(34,197,94,1)] hover:scale-110 hover:rotate-6 transition-all duration-500 border-[6px] border-white cursor-pointer transform-gpu">
+                <div className="absolute -top-6 -right-6 bg-gradient-to-r from-pink-300 to-rose-400 text-green-900 px-6 py-3 rounded-full font-black text-xl rotate-12 shadow-2xl animate-bounce border-4 border-white">
+                  HOT! 🔥
+                </div>
+                <div className="bg-white/30 backdrop-blur-md rounded-3xl p-6 w-24 h-24 flex items-center justify-center mb-6 mx-auto text-6xl shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                  <Icons.Stats size="xl" />
+                </div>
+                <h3 className="text-4xl font-black mb-5 text-white text-center drop-shadow-2xl">
+                  STATS PRO
+                </h3>
+                <p className="text-white font-black text-center text-xl leading-relaxed">
+                  Analytics ultra-détaillées en temps réel!
+                </p>
+              </div>
+            </div>
+            <div className="relative group perspective-1000">
+              <div className="absolute -inset-2 bg-gradient-to-r from-orange-400 to-pink-500 rounded-[2rem] blur-xl opacity-50 group-hover:opacity-100 animate-pulse"></div>
+              <div className="relative bg-gradient-to-br from-orange-400 via-red-400 to-pink-400 rounded-[2rem] p-10 shadow-[0_0_60px_rgba(249,115,22,1)] hover:shadow-[0_0_100px_rgba(249,115,22,1)] hover:scale-110 hover:-rotate-6 transition-all duration-500 border-[6px] border-white cursor-pointer transform-gpu">
+                <div className="absolute -top-6 -right-6 bg-gradient-to-r from-cyan-300 to-blue-400 text-orange-900 px-6 py-3 rounded-full font-black text-xl rotate-12 shadow-2xl animate-bounce border-4 border-white">
+                  FAST! ⚡
+                </div>
+                <div className="bg-white/30 backdrop-blur-md rounded-3xl p-6 w-24 h-24 flex items-center justify-center mb-6 mx-auto text-6xl shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                  <Icons.Zap size="xl" />
+                </div>
+                <h3 className="text-4xl font-black mb-5 text-white text-center drop-shadow-2xl">
+                  ULTRA RAPIDE
+                </h3>
+                <p className="text-white font-black text-center text-xl leading-relaxed">
+                  7 systèmes d'optimisation puissants!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Decks - ULTRA HOT */}
+        {!loading && recent.length > 0 && (
+          <div className="mb-24">
+            <h2 className="text-7xl font-black mb-16 text-center bg-gradient-to-r from-orange-300 via-red-400 to-purple-400 bg-clip-text text-transparent drop-shadow-2xl animate-pulse">
+              🔥 PAQUETS ULTRA HOT 🔥
+            </h2>
+            <div className="grid md:grid-cols-3 gap-10">
+              {recent.map((d, i) => (
+                <div
                   key={d.id}
-                  whileHover={{ y:-4, scale:1.03 }}
-                  whileTap={{ scale:0.96 }}
-                  onClick={()=>navigate(`/study/${d.id}`)}
-                  className="card text-left relative overflow-hidden group"
+                  className="relative group perspective-1000"
+                  style={{ animationDelay: `${i * 150}ms` }}
                 >
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-br from-blue-500/10 via-fuchsia-500/10 to-purple-600/10" />
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-2xl">{d.icon || '📘'}</span>
-                      <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1">{d.name}</h3>
+                  <div className="absolute -inset-3 bg-gradient-to-r from-pink-500 via-rose-500 to-red-600 rounded-[2rem] blur-xl opacity-60 group-hover:opacity-100 animate-pulse"></div>
+                  <button
+                    onClick={() => navigate(`/study/${d.id}`)}
+                    className="relative bg-gradient-to-br from-pink-500 via-rose-500 to-red-600 rounded-[2rem] p-10 shadow-[0_0_60px_rgba(236,72,153,1)] hover:shadow-[0_0_100px_rgba(236,72,153,1)] hover:scale-110 hover:rotate-3 transition-all duration-500 border-[6px] border-yellow-300 hover:border-white cursor-pointer text-left transform-gpu"
+                  >
+                    <div className="absolute -top-4 -left-4 bg-gradient-to-r from-yellow-300 to-orange-400 text-pink-900 px-8 py-3 rounded-full font-black text-lg rotate-[-12deg] shadow-2xl border-4 border-white animate-bounce">
+                      TRENDING 🚀
                     </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-3 mb-3">{d.description || 'Pas de description'}</p>
-                    <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
-                      <span>{d.totalCards} cartes</span>
-                      <span>{d.masteredCards} maîtrisées</span>
-                      <span className="text-blue-600 dark:text-blue-400">Étudier →</span>
+                    <div className="text-7xl mb-6 transform group-hover:scale-125 group-hover:rotate-12 transition-all duration-500">
+                      {d.icon || <Icons.Decks size={40} />}
                     </div>
-                  </div>
-                </m.button>
+                    <h3 className="text-3xl font-black mb-6 text-white drop-shadow-2xl">
+                      {d.name}
+                    </h3>
+                    <div className="flex gap-4 flex-wrap">
+                      <span className="px-6 py-3 bg-white text-pink-600 rounded-2xl text-xl font-black shadow-xl">
+                        {d.totalCards} cartes 📝
+                      </span>
+                      <span className="px-6 py-3 bg-gradient-to-r from-yellow-300 to-orange-400 text-pink-900 rounded-2xl text-xl font-black shadow-xl">
+                        {d.masteredCards} ✨
+                      </span>
+                    </div>
+                  </button>
+                </div>
               ))}
             </div>
-          )}
-          {decks.length > 4 && (
-            <div className="text-center mt-6">
-              <button onClick={handleExploreDecks} className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm">Voir tous les paquets</button>
-            </div>
-          )}
-        </motion.div>
-
-        {/* Footer avec informations système et effets */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: showWelcome ? 7 : 3.5, duration: 0.8 }}
-          className="text-center py-8 border-t border-gray-200 dark:border-gray-700"
-        >
-          <div className="flex flex-wrap justify-center gap-6 text-sm">
-            {[
-              { icon: '🧠', text: 'IA d\'apprentissage adaptatif' },
-              { icon: '⚡', text: '7 systèmes d\'optimisation' },
-              { icon: '📱', text: 'Compatible PWA' },
-              { icon: '🌙', text: 'Mode sombre intégré' }
-            ].map((item, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: showWelcome ? 7.5 + index * 0.1 : 4 + index * 0.1 }}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-full text-gray-700 dark:text-gray-300 hover:scale-105 transition-transform cursor-pointer"
-                whileHover={{ scale: 1.1, rotate: 5 }}
-              >
-                <motion.span
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 3, repeat: Infinity, delay: index * 0.5 }}
-                >
-                  {item.icon}
-                </motion.span>
-                <span>{item.text}</span>
-              </motion.div>
-            ))}
           </div>
-        </motion.div>
+        )}
+
+        {/* Quick Actions - MEGA POWER */}
+        <div className="mb-24">
+          <h2 className="text-7xl font-black mb-16 text-center bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-400 bg-clip-text text-transparent drop-shadow-2xl animate-pulse">
+            ⚡ ACTIONS ULTRA RAPIDES ⚡
+          </h2>
+          <div className="grid md:grid-cols-2 gap-12">
+            <div className="relative group perspective-1000">
+              <div className="absolute -inset-4 bg-gradient-to-r from-emerald-400 to-cyan-500 rounded-[2.5rem] blur-2xl opacity-60 group-hover:opacity-100 animate-pulse"></div>
+              <button
+                onClick={() => navigate("/analytics-workspace")}
+                className="relative bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 p-14 rounded-[2rem] text-white hover:scale-110 hover:-rotate-3 transition-all duration-500 shadow-[0_0_80px_rgba(16,185,129,1)] border-[6px] border-white hover:border-yellow-300 transform-gpu"
+              >
+                <div className="absolute -top-6 -right-6 bg-gradient-to-r from-yellow-300 to-orange-400 text-emerald-900 px-8 py-4 rounded-full font-black text-2xl animate-bounce shadow-2xl border-4 border-white">
+                  VOIR! 👀
+                </div>
+                <div className="flex items-center gap-8">
+                  <div className="w-28 h-28 bg-white/90 rounded-[2rem] flex items-center justify-center text-7xl shadow-2xl transform group-hover:rotate-[360deg] group-hover:scale-125 transition-all duration-700">
+                    <Icons.Stats size={48} />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-5xl font-black drop-shadow-2xl mb-3">
+                      STATISTIQUES
+                    </h3>
+                    <p className="text-2xl font-black">Analysez vos progrès!</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+            <div className="relative group perspective-1000">
+              <div className="absolute -inset-4 bg-gradient-to-r from-purple-400 to-pink-500 rounded-[2.5rem] blur-2xl opacity-60 group-hover:opacity-100 animate-pulse"></div>
+              <button
+                onClick={() => navigate("/settings")}
+                className="relative bg-gradient-to-br from-purple-400 via-fuchsia-400 to-pink-400 p-14 rounded-[2rem] text-white hover:scale-110 hover:rotate-3 transition-all duration-500 shadow-[0_0_80px_rgba(168,85,247,1)] border-[6px] border-white hover:border-yellow-300 transform-gpu"
+              >
+                <div className="absolute -top-6 -right-6 bg-gradient-to-r from-cyan-300 to-blue-400 text-purple-900 px-8 py-4 rounded-full font-black text-2xl animate-bounce shadow-2xl border-4 border-white">
+                  GO! 🚀
+                </div>
+                <div className="flex items-center gap-8">
+                  <div className="w-28 h-28 bg-white/90 rounded-[2rem] flex items-center justify-center text-7xl shadow-2xl transform group-hover:rotate-[360deg] group-hover:scale-125 transition-all duration-700">
+                    <Icons.Settings size={48} />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-5xl font-black drop-shadow-2xl mb-3">
+                      PARAMÈTRES
+                    </h3>
+                    <p className="text-2xl font-black">Customisez tout!</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer - ULTRA TECH */}
+        <div className="py-16">
+          <div className="relative bg-gradient-to-br from-white/25 to-white/10 backdrop-blur-2xl border-[6px] border-white/50 rounded-[2.5rem] p-12 shadow-[0_0_80px_rgba(255,255,255,0.4)] hover:scale-105 transition-all duration-500">
+            <h3 className="text-6xl font-black bg-gradient-to-r from-yellow-300 via-orange-400 to-pink-400 bg-clip-text text-transparent mb-10 drop-shadow-2xl animate-pulse">
+              🎉 TECHNOLOGIE ULTRA-MODERNE 🎉
+            </h3>
+            <div className="flex gap-8 justify-center flex-wrap mb-8">
+              <span className="relative group px-12 py-6 bg-gradient-to-r from-blue-400 via-purple-500 to-violet-600 text-white rounded-2xl text-2xl font-black shadow-[0_0_50px_rgba(59,130,246,1)] hover:shadow-[0_0_80px_rgba(59,130,246,1)] hover:scale-125 hover:-rotate-3 transition-all duration-500 border-4 border-white cursor-pointer">
+                <span className="drop-shadow-lg">✅ PWA Ready</span>
+              </span>
+              <span className="relative group px-12 py-6 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-600 text-white rounded-2xl text-2xl font-black shadow-[0_0_50px_rgba(251,191,36,1)] hover:shadow-[0_0_80px_rgba(251,191,36,1)] hover:scale-125 hover:rotate-3 transition-all duration-500 border-4 border-white cursor-pointer">
+                <span className="drop-shadow-lg">📴 Mode Offline</span>
+              </span>
+              <span className="relative group px-12 py-6 bg-gradient-to-r from-green-400 via-emerald-500 to-teal-600 text-white rounded-2xl text-2xl font-black shadow-[0_0_50px_rgba(34,197,94,1)] hover:shadow-[0_0_80px_rgba(34,197,94,1)] hover:scale-125 hover:-rotate-3 transition-all duration-500 border-4 border-white cursor-pointer">
+                <span className="drop-shadow-lg">💾 IndexedDB</span>
+              </span>
+            </div>
+            <p className="text-white font-black text-4xl drop-shadow-2xl animate-bounce">
+              🚀 L'APPLICATION LA PLUS PUISSANTE AU MONDE! 🚀
+            </p>
+          </div>
+        </div>
       </div>
     </div>
-  )
+  );
 }
-
-export default HomePage

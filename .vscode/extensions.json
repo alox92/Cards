@@ -1,0 +1,17 @@
+{
+  // Workspace extension recommendations. VS Code will prompt to install these.
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "vitest.explorer",
+    "ms-playwright.playwright",
+    "usernamehw.errorlens",
+    "mikestead.dotenv",
+    "editorconfig.editorconfig",
+    "eamodio.gitlens",
+    "davidanson.vscode-markdownlint",
+    "csstools.postcss",
+    "streetsidesoftware.code-spell-checker"
+  ]
+}

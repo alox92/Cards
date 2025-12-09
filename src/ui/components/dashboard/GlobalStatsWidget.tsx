@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import clsx from 'clsx'
 import type { GlobalStatsSnapshot } from '@/application/services/StatisticsService'
 import { useGlobalStats } from '@/ui/hooks/useGlobalStats'
+import Icons from '../common/Icons'
 
 interface GlobalStatsWidgetProps {
   stats?: GlobalStatsSnapshot | null
@@ -66,25 +67,25 @@ export function GlobalStatsWidget({
         id: 'totalDecks',
         label: 'Decks',
         value: numberFormatter.format(stats.totalDecks),
-        icon: '🗂️'
+        icon: <Icons.Folder size="sm" />
       },
       {
         id: 'totalCards',
         label: 'Cartes',
         value: numberFormatter.format(stats.totalCards),
-        icon: '🃏'
+        icon: <Icons.File size="sm" />
       },
       {
         id: 'matureCards',
         label: 'Matures',
         value: numberFormatter.format(stats.matureCards),
-        icon: '🌱'
+        icon: <Icons.Check size="sm" />
       },
       {
         id: 'totalSessions',
         label: 'Sessions',
         value: numberFormatter.format(stats.totalSessions),
-        icon: '🧠'
+        icon: <Icons.Study size="sm" />
       }
     ]
 
@@ -97,49 +98,49 @@ export function GlobalStatsWidget({
         id: 'averageRetention',
         label: 'Rétention',
         value: percentFormatter.format(Math.max(0, Math.min(1, stats.averageRetention || 0))),
-        icon: '📈'
+        icon: <Icons.TrendUp size="sm" />
       },
       {
         id: 'accuracy',
         label: 'Précision',
         value: percentFormatter.format(Math.max(0, Math.min(1, stats.accuracy || 0))),
-        icon: '🎯'
+        icon: <Icons.Target size="sm" />
       },
       {
         id: 'avgSessionAccuracy',
         label: 'Acc. session',
         value: percentFormatter.format(Math.max(0, Math.min(1, stats.avgSessionAccuracy || 0))),
-        icon: '⚖️'
+        icon: <Icons.Stats size="sm" />
       },
       {
         id: 'dueToday',
         label: 'À réviser',
         value: numberFormatter.format(stats.dueToday),
-        icon: '⏰'
+        icon: <Icons.Clock size="sm" />
       },
       {
         id: 'dueTomorrow',
         label: 'Demain',
         value: numberFormatter.format(stats.dueTomorrow),
-        icon: '🌅'
+        icon: <Icons.Clock size="sm" />
       },
       {
         id: 'reviewsToday',
         label: 'Revues du jour',
         value: numberFormatter.format(stats.reviewsToday),
-        icon: '🔁'
+        icon: <Icons.Refresh size="sm" />
       },
       {
         id: 'newCardsToday',
         label: 'Nouv. cartes',
         value: numberFormatter.format(stats.newCardsToday),
-        icon: '✨'
+        icon: <Icons.Zap size="sm" />
       },
       {
         id: 'currentStreak',
         label: 'Streak',
         value: `${numberFormatter.format(stats.currentStreak)} j`,
-        icon: '🔥'
+        icon: <Icons.Zap size="sm" className="text-orange-500" />
       }
     ]
 

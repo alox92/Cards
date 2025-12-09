@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import useGlobalStats from '@/ui/hooks/useGlobalStats'
 import { container } from '@/application/Container'
 import { HEATMAP_STATS_SERVICE_TOKEN, HeatmapStatsService } from '@/application/services/HeatmapStatsService'
+import Icons from '@/ui/components/common/Icons'
 
 // Lazy charts (simulate heavy libs)
 const Sparkline = lazy(()=> import('./components/Sparkline'))
@@ -29,7 +30,10 @@ export const AnalyticsWorkspace = () => {
   return (
     <div className="p-6 space-y-8">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">📈 Analytics</h1>
+        <h1 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+          <Icons.TrendUp size="md" />
+          <span>Analytics</span>
+        </h1>
         <button onClick={loadRecent} className="px-3 py-1.5 rounded bg-gray-200 dark:bg-gray-700 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600">Charger sessions</button>
       </header>
       <section>
