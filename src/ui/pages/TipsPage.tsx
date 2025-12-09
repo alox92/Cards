@@ -2,338 +2,381 @@
  * TipsPage - Page de conseils interactive avec IA
  */
 
-import React, { useState, useEffect, useRef } from 'react'
-import { EnhancedUI } from '../components/Enhanced/EnhancedUI'
-import { getFluidTransitionMastery, FluidTransitionMastery } from '../../core/FluidTransitionMastery'
-import { getIntelligentLearningSystem, IntelligentLearningSystem } from '../../core/IntelligentLearningSystem'
+import React, { useState, useEffect, useRef } from "react";
+import { EnhancedUI } from "../components/Enhanced/EnhancedUILib";
+import WorkspaceGlassLayout from "@/ui/components/layout/WorkspaceGlassLayout";
+import {
+  getFluidTransitionMastery,
+  FluidTransitionMastery,
+} from "../../core/FluidTransitionMastery";
+import {
+  getIntelligentLearningSystem,
+  IntelligentLearningSystem,
+} from "../../core/IntelligentLearningSystem";
+import Icons from "../components/common/Icons";
 
 interface Tip {
-  id: string
-  title: string
-  description: string
-  category: 'study' | 'memory' | 'time' | 'motivation' | 'technique'
-  difficulty: 'beginner' | 'intermediate' | 'advanced'
-  estimatedImpact: number // 1-10
-  timeToImplement: number // minutes
-  icon: string
-  isPersonalized: boolean
-  sources?: string[]
-  examples?: string[]
+  id: string;
+  title: string;
+  description: string;
+  category: "study" | "memory" | "time" | "motivation" | "technique";
+  difficulty: "beginner" | "intermediate" | "advanced";
+  estimatedImpact: number; // 1-10
+  timeToImplement: number; // minutes
+  icon: React.ReactNode;
+  isPersonalized: boolean;
+  sources?: string[];
+  examples?: string[];
 }
 
 interface TipCategory {
-  id: string
-  name: string
-  description: string
-  icon: string
-  color: string
-  tips: Tip[]
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+  tips: Tip[];
 }
 
 export const TipsPage: React.FC = () => {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [difficulty, setDifficulty] = useState<string>('all')
-  const [personalizedTips, setPersonalizedTips] = useState<Tip[]>([])
-  const [allTips] = useState<TipCategory[]>(generateTipsData())
-  const [searchQuery, setSearchQuery] = useState('')
-  const [favorites, setFavorites] = useState<Set<string>>(new Set())
-  const [expandedTip, setExpandedTip] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [difficulty, setDifficulty] = useState<string>("all");
+  const [personalizedTips, setPersonalizedTips] = useState<Tip[]>([]);
+  const [allTips] = useState<TipCategory[]>(generateTipsData());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [expandedTip, setExpandedTip] = useState<string | null>(null);
 
-  const pageRef = useRef<HTMLDivElement>(null)
-  const transitionRef = useRef<FluidTransitionMastery | null>(null)
-  const learningRef = useRef<IntelligentLearningSystem | null>(null)
+  const pageRef = useRef<HTMLDivElement>(null);
+  const transitionRef = useRef<FluidTransitionMastery | null>(null);
+  const learningRef = useRef<IntelligentLearningSystem | null>(null);
 
   // Initialiser les systèmes
   useEffect(() => {
     const initSystems = async () => {
-  transitionRef.current = getFluidTransitionMastery()
-  learningRef.current = getIntelligentLearningSystem()
-      
-      await transitionRef.current.initialize()
-      
-      // Générer des conseils personnalisés
-      await generatePersonalizedTips()
-    }
+      transitionRef.current = getFluidTransitionMastery();
+      learningRef.current = getIntelligentLearningSystem();
 
-    initSystems()
+      await transitionRef.current.initialize();
+
+      // Générer des conseils personnalisés
+      await generatePersonalizedTips();
+    };
+
+    initSystems();
 
     return () => {
-  // Pas d'arrêt du singleton global
-      if (learningRef.current) learningRef.current.cleanup()
-    }
-  }, [])
+      // Pas d'arrêt du singleton global
+      if (learningRef.current) learningRef.current.cleanup();
+    };
+  }, []);
 
   // Générer des conseils personnalisés basés sur l'IA
   const generatePersonalizedTips = async () => {
-    if (!learningRef.current) return
+    if (!learningRef.current) return;
 
-    const profile = learningRef.current.getLearningProfile()
-    const recommendations = await learningRef.current.generateRecommendations()
+    const profile = learningRef.current.getLearningProfile();
+    const recommendations = await learningRef.current.generateRecommendations();
 
     const personalizedTips: Tip[] = [
       {
-        id: 'personalized-1',
-        title: 'Optimisez votre horaire d\'étude',
-        description: `Basé sur vos données, vous apprenez mieux ${profile?.preferences.studyTime || 'le matin'}. Planifiez vos sessions les plus importantes à ce moment.`,
-        category: 'time',
-        difficulty: 'beginner',
+        id: "personalized-1",
+        title: "Optimisez votre horaire d'étude",
+        description: `Basé sur vos données, vous apprenez mieux ${
+          profile?.preferences.studyTime || "le matin"
+        }. Planifiez vos sessions les plus importantes à ce moment.`,
+        category: "time",
+        difficulty: "beginner",
         estimatedImpact: 8,
         timeToImplement: 5,
-        icon: '⏰',
+        icon: <Icons.Clock size="md" />,
         isPersonalized: true,
         examples: [
-          'Réservez 30-45 minutes chaque matin pour les nouvelles cartes',
-          'Utilisez les soirées pour réviser les cartes anciennes',
-          'Prenez des pauses de 10 minutes toutes les heures'
-        ]
+          "Réservez 30-45 minutes chaque matin pour les nouvelles cartes",
+          "Utilisez les soirées pour réviser les cartes anciennes",
+          "Prenez des pauses de 10 minutes toutes les heures",
+        ],
       },
       {
-        id: 'personalized-2',
-        title: 'Technique de mémorisation adaptée',
-        description: `Votre style d'apprentissage ${profile?.learningStyle || 'visuel'} bénéficierait de techniques spécifiques.`,
-        category: 'memory',
-        difficulty: 'intermediate',
+        id: "personalized-2",
+        title: "Technique de mémorisation adaptée",
+        description: `Votre style d'apprentissage ${
+          profile?.learningStyle || "visuel"
+        } bénéficierait de techniques spécifiques.`,
+        category: "memory",
+        difficulty: "intermediate",
         estimatedImpact: 9,
         timeToImplement: 15,
-        icon: '🧠',
+        icon: <Icons.Study size="md" />,
         isPersonalized: true,
         examples: [
-          'Créez des images mentales vivaces',
-          'Utilisez des couleurs pour catégoriser',
-          'Dessinez des schémas et des mind maps'
-        ]
-      }
-    ]
+          "Créez des images mentales vivaces",
+          "Utilisez des couleurs pour catégoriser",
+          "Dessinez des schémas et des mind maps",
+        ],
+      },
+    ];
 
     // Ajouter des conseils basés sur les recommandations IA
     recommendations.forEach((rec: any, index: number) => {
-      if (index < 3) { // Limiter à 3 conseils supplémentaires
+      if (index < 3) {
+        // Limiter à 3 conseils supplémentaires
         personalizedTips.push({
           id: `ai-rec-${index}`,
           title: rec.title,
           description: rec.description,
           category: rec.type as any,
-          difficulty: 'intermediate',
+          difficulty: "intermediate",
           estimatedImpact: Math.floor(rec.estimatedBenefit * 10),
           timeToImplement: 10,
           icon: getIconForRecommendationType(rec.type),
-          isPersonalized: true
-        })
+          isPersonalized: true,
+        });
       }
-    })
+    });
 
-    setPersonalizedTips(personalizedTips)
-  }
+    setPersonalizedTips(personalizedTips);
+  };
 
   // Obtenir l'icône pour le type de recommandation
-  const getIconForRecommendationType = (type: string): string => {
+  const getIconForRecommendationType = (type: string): React.ReactNode => {
     switch (type) {
-      case 'study': return '📚'
-      case 'review': return '🔄'
-      case 'break': return '☕'
-      case 'difficulty': return '🎯'
-      case 'content': return '📝'
-      default: return '💡'
+      case "study":
+        return <Icons.Decks size="sm" />;
+      case "review":
+        return <Icons.Refresh size="sm" />;
+      case "break":
+        return <Icons.Clock size="sm" />;
+      case "difficulty":
+        return <Icons.Target size="sm" />;
+      case "content":
+        return <Icons.File size="sm" />;
+      default:
+        return <Icons.Zap size="sm" />;
     }
-  }
+  };
 
   // Filtrer les conseils
   const filteredTips = React.useMemo(() => {
-    let tips: Tip[] = []
+    let tips: Tip[] = [];
 
-    if (selectedCategory === 'personalized') {
-      tips = personalizedTips
-    } else if (selectedCategory === 'all') {
-      tips = allTips.flatMap(cat => cat.tips).concat(personalizedTips)
+    if (selectedCategory === "personalized") {
+      tips = personalizedTips;
+    } else if (selectedCategory === "all") {
+      tips = allTips.flatMap((cat) => cat.tips).concat(personalizedTips);
     } else {
-      const category = allTips.find(cat => cat.id === selectedCategory)
-      tips = category ? category.tips : []
+      const category = allTips.find((cat) => cat.id === selectedCategory);
+      tips = category ? category.tips : [];
     }
 
     // Filtrer par difficulté
-    if (difficulty !== 'all') {
-      tips = tips.filter(tip => tip.difficulty === difficulty)
+    if (difficulty !== "all") {
+      tips = tips.filter((tip) => tip.difficulty === difficulty);
     }
 
     // Filtrer par recherche
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      tips = tips.filter(tip => 
-        tip.title.toLowerCase().includes(query) ||
-        tip.description.toLowerCase().includes(query)
-      )
+      const query = searchQuery.toLowerCase();
+      tips = tips.filter(
+        (tip) =>
+          tip.title.toLowerCase().includes(query) ||
+          tip.description.toLowerCase().includes(query)
+      );
     }
 
     return tips.sort((a, b) => {
       // Prioriser les conseils personnalisés et par impact
-      if (a.isPersonalized && !b.isPersonalized) return -1
-      if (!a.isPersonalized && b.isPersonalized) return 1
-      return b.estimatedImpact - a.estimatedImpact
-    })
-  }, [selectedCategory, difficulty, searchQuery, allTips, personalizedTips])
+      if (a.isPersonalized && !b.isPersonalized) return -1;
+      if (!a.isPersonalized && b.isPersonalized) return 1;
+      return b.estimatedImpact - a.estimatedImpact;
+    });
+  }, [selectedCategory, difficulty, searchQuery, allTips, personalizedTips]);
 
   // Basculer les favoris
   const toggleFavorite = (tipId: string) => {
-    setFavorites(prev => {
-      const newFavorites = new Set(prev)
+    setFavorites((prev) => {
+      const newFavorites = new Set(prev);
       if (newFavorites.has(tipId)) {
-        newFavorites.delete(tipId)
+        newFavorites.delete(tipId);
       } else {
-        newFavorites.add(tipId)
+        newFavorites.add(tipId);
       }
-      return newFavorites
-    })
-  }
+      return newFavorites;
+    });
+  };
 
   // Changer de catégorie avec animation
   const changeCategory = async (categoryId: string) => {
-    if (categoryId === selectedCategory) return
+    if (categoryId === selectedCategory) return;
 
     if (transitionRef.current && pageRef.current) {
-      const tipsContainer = pageRef.current.querySelector('.tips-grid')
+      const tipsContainer = pageRef.current.querySelector(".tips-grid");
       if (tipsContainer) {
         await transitionRef.current.animateOut(tipsContainer as HTMLElement, {
-          type: 'fade',
-          duration: 200
-        })
+          type: "fade",
+          duration: 200,
+        });
       }
     }
 
-    setSelectedCategory(categoryId)
+    setSelectedCategory(categoryId);
 
     if (transitionRef.current && pageRef.current) {
-      const tipsContainer = pageRef.current.querySelector('.tips-grid')
+      const tipsContainer = pageRef.current.querySelector(".tips-grid");
       if (tipsContainer) {
         await transitionRef.current.animateIn(tipsContainer as HTMLElement, {
-          type: 'slide-up',
-          duration: 300
-        })
+          type: "slide-up",
+          duration: 300,
+        });
       }
     }
-  }
+  };
 
   return (
-    <div className="tips-page" ref={pageRef}>
-      {/* En-tête */}
-      <div className="tips-header">
-        <EnhancedUI.FloatingElement delay={0} distance={15}>
-          <h1 className="page-title">
-            💡 Conseils d'Apprentissage Intelligents
-          </h1>
-        </EnhancedUI.FloatingElement>
-        
-        <EnhancedUI.FloatingElement delay={0.2} distance={10}>
-          <p className="page-subtitle">
-            Conseils personnalisés par IA pour optimiser votre apprentissage
-          </p>
-        </EnhancedUI.FloatingElement>
-      </div>
-
-      {/* Barre de recherche */}
-      <div className="search-section">
-        <EnhancedUI.MicroInteraction type="focus" intensity="medium">
-          <div className="search-container">
-            <span className="search-icon">🔍</span>
-            <input
-              type="text"
-              placeholder="Rechercher des conseils..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
-            />
-          </div>
-        </EnhancedUI.MicroInteraction>
-      </div>
-
-      {/* Filtres */}
-      <div className="filters-section">
-        <div className="filter-group">
-          <h3>Catégorie</h3>
-          <div className="filter-buttons">
-            <EnhancedUI.GlowButton
-              variant={selectedCategory === 'personalized' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => changeCategory('personalized')}
-              glow={selectedCategory === 'personalized'}
-            >
-              🎯 Personnalisés ({personalizedTips.length})
-            </EnhancedUI.GlowButton>
-            
-            <EnhancedUI.GlowButton
-              variant={selectedCategory === 'all' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => changeCategory('all')}
-              glow={selectedCategory === 'all'}
-            >
-              📚 Tous
-            </EnhancedUI.GlowButton>
-
-            {allTips.map(category => (
-              <EnhancedUI.GlowButton
-                key={category.id}
-                variant={selectedCategory === category.id ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => changeCategory(category.id)}
-                glow={selectedCategory === category.id}
-              >
-                {category.icon} {category.name}
-              </EnhancedUI.GlowButton>
-            ))}
-          </div>
-        </div>
-
-        <div className="filter-group">
-          <h3>Difficulté</h3>
-          <div className="filter-buttons">
-            {['all', 'beginner', 'intermediate', 'advanced'].map(level => (
-              <EnhancedUI.GlowButton
-                key={level}
-                variant={difficulty === level ? 'success' : 'secondary'}
-                size="sm"
-                onClick={() => setDifficulty(level)}
-                glow={difficulty === level}
-              >
-                {level === 'all' ? 'Toutes' : 
-                 level === 'beginner' ? 'Débutant' :
-                 level === 'intermediate' ? 'Intermédiaire' : 'Avancé'}
-              </EnhancedUI.GlowButton>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Grille de conseils */}
-      <div className="tips-grid">
-        {filteredTips.map((tip, index) => (
-          <EnhancedUI.FloatingElement key={tip.id} delay={index * 0.1} distance={5}>
-            <TipCard
-              tip={tip}
-              isFavorite={favorites.has(tip.id)}
-              isExpanded={expandedTip === tip.id}
-              onToggleFavorite={() => toggleFavorite(tip.id)}
-              onToggleExpand={() => setExpandedTip(
-                expandedTip === tip.id ? null : tip.id
-              )}
-            />
+    <WorkspaceGlassLayout
+      maxWidthClassName="max-w-5xl"
+      panelClassName="px-0 sm:px-0"
+    >
+      <div className="tips-page" ref={pageRef}>
+        {/* En-tête */}
+        <div className="tips-header">
+          <EnhancedUI.FloatingElement delay={0} distance={15}>
+            <h1 className="page-title flex items-center gap-3 justify-center">
+              <Icons.Zap size="lg" />
+              Conseils d'Apprentissage Intelligents
+            </h1>
           </EnhancedUI.FloatingElement>
-        ))}
-      </div>
 
-      {filteredTips.length === 0 && (
-        <div className="no-tips">
-          <div className="no-tips-icon">🔍</div>
-          <h3>Aucun conseil trouvé</h3>
-          <p>Essayez de modifier vos filtres ou votre recherche</p>
+          <EnhancedUI.FloatingElement delay={0.2} distance={10}>
+            <p className="page-subtitle">
+              Conseils personnalisés par IA pour optimiser votre apprentissage
+            </p>
+          </EnhancedUI.FloatingElement>
         </div>
-      )}
 
-      <style>{`
+        {/* Barre de recherche */}
+        <div className="search-section">
+          <EnhancedUI.MicroInteraction type="focus" intensity="medium">
+            <div className="search-container">
+              <span className="search-icon">🔍</span>
+              <input
+                type="text"
+                placeholder="Rechercher des conseils..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
+            </div>
+          </EnhancedUI.MicroInteraction>
+        </div>
+
+        {/* Filtres */}
+        <div className="filters-section">
+          <div className="filter-group">
+            <h3>Catégorie</h3>
+            <div className="filter-buttons">
+              <EnhancedUI.GlowButton
+                variant={
+                  selectedCategory === "personalized" ? "primary" : "secondary"
+                }
+                size="sm"
+                onClick={() => changeCategory("personalized")}
+                glow={selectedCategory === "personalized"}
+              >
+                <span className="flex items-center gap-2">
+                  <Icons.Target size="xs" />
+                  Personnalisés ({personalizedTips.length})
+                </span>
+              </EnhancedUI.GlowButton>
+
+              <EnhancedUI.GlowButton
+                variant={selectedCategory === "all" ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => changeCategory("all")}
+                glow={selectedCategory === "all"}
+              >
+                <span className="flex items-center gap-2">
+                  <Icons.Decks size="xs" />
+                  Tous
+                </span>
+              </EnhancedUI.GlowButton>
+
+              {allTips.map((category) => (
+                <EnhancedUI.GlowButton
+                  key={category.id}
+                  variant={
+                    selectedCategory === category.id ? "primary" : "secondary"
+                  }
+                  size="sm"
+                  onClick={() => changeCategory(category.id)}
+                  glow={selectedCategory === category.id}
+                >
+                  {category.icon} {category.name}
+                </EnhancedUI.GlowButton>
+              ))}
+            </div>
+          </div>
+
+          <div className="filter-group">
+            <h3>Difficulté</h3>
+            <div className="filter-buttons">
+              {["all", "beginner", "intermediate", "advanced"].map((level) => (
+                <EnhancedUI.GlowButton
+                  key={level}
+                  variant={difficulty === level ? "success" : "secondary"}
+                  size="sm"
+                  onClick={() => setDifficulty(level)}
+                  glow={difficulty === level}
+                >
+                  {level === "all"
+                    ? "Toutes"
+                    : level === "beginner"
+                    ? "Débutant"
+                    : level === "intermediate"
+                    ? "Intermédiaire"
+                    : "Avancé"}
+                </EnhancedUI.GlowButton>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Grille de conseils */}
+        <div className="tips-grid">
+          {filteredTips.map((tip, index) => (
+            <EnhancedUI.FloatingElement
+              key={tip.id}
+              delay={index * 0.1}
+              distance={5}
+            >
+              <TipCard
+                tip={tip}
+                isFavorite={favorites.has(tip.id)}
+                isExpanded={expandedTip === tip.id}
+                onToggleFavorite={() => toggleFavorite(tip.id)}
+                onToggleExpand={() =>
+                  setExpandedTip(expandedTip === tip.id ? null : tip.id)
+                }
+              />
+            </EnhancedUI.FloatingElement>
+          ))}
+        </div>
+
+        {filteredTips.length === 0 && (
+          <div className="no-tips">
+            <div className="no-tips-icon">🔍</div>
+            <h3>Aucun conseil trouvé</h3>
+            <p>Essayez de modifier vos filtres ou votre recherche</p>
+          </div>
+        )}
+        <style>{`
         .tips-page {
           max-width: 1200px;
           margin: 0 auto;
-          padding: 20px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          min-height: 100vh;
+          padding: 24px;
+          background: radial-gradient(circle at top left, rgba(255,255,255,0.08), transparent 55%),
+                      linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 28px;
           color: white;
         }
 
@@ -482,53 +525,74 @@ export const TipsPage: React.FC = () => {
           }
         }
       `}</style>
-    </div>
-  )
-}
+      </div>
+    </WorkspaceGlassLayout>
+  );
+};
 
 // Composant carte de conseil
 const TipCard: React.FC<{
-  tip: Tip
-  isFavorite: boolean
-  isExpanded: boolean
-  onToggleFavorite: () => void
-  onToggleExpand: () => void
+  tip: Tip;
+  isFavorite: boolean;
+  isExpanded: boolean;
+  onToggleFavorite: () => void;
+  onToggleExpand: () => void;
 }> = ({ tip, isFavorite, isExpanded, onToggleFavorite, onToggleExpand }) => {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'beginner': return '#4CAF50'
-      case 'intermediate': return '#FF9800'
-      case 'advanced': return '#F44336'
-      default: return '#9E9E9E'
+      case "beginner":
+        return "#4CAF50";
+      case "intermediate":
+        return "#FF9800";
+      case "advanced":
+        return "#F44336";
+      default:
+        return "#9E9E9E";
     }
-  }
+  };
 
   const getImpactStars = (impact: number) => {
-    return '⭐'.repeat(Math.min(5, Math.max(1, Math.floor(impact / 2))))
-  }
+    const stars = Math.min(5, Math.max(1, Math.floor(impact / 2)));
+    return (
+      <span className="flex items-center gap-0.5">
+        {Array.from({ length: stars }).map((_, i) => (
+          <Icons.Zap key={i} size="xs" className="text-yellow-500" />
+        ))}
+      </span>
+    );
+  };
 
   return (
     <EnhancedUI.MicroInteraction type="hover" intensity="medium">
-      <div className={`tip-card ${tip.isPersonalized ? 'personalized' : ''}`}>
+      <div className={`tip-card ${tip.isPersonalized ? "personalized" : ""}`}>
         <div className="tip-header">
           <div className="tip-icon">{tip.icon}</div>
           <div className="tip-meta">
             {tip.isPersonalized && (
-              <span className="personalized-badge">🎯 Personnalisé</span>
+              <span className="personalized-badge flex items-center gap-1">
+                <Icons.Target size="xs" />
+                Personnalisé
+              </span>
             )}
-            <span 
+            <span
               className="difficulty-badge"
               style={{ backgroundColor: getDifficultyColor(tip.difficulty) }}
             >
-              {tip.difficulty === 'beginner' ? 'Débutant' :
-               tip.difficulty === 'intermediate' ? 'Intermédiaire' : 'Avancé'}
+              {tip.difficulty === "beginner"
+                ? "Débutant"
+                : tip.difficulty === "intermediate"
+                ? "Intermédiaire"
+                : "Avancé"}
             </span>
           </div>
           <button
-            className={`favorite-btn ${isFavorite ? 'active' : ''}`}
+            className={`favorite-btn ${isFavorite ? "active" : ""}`}
             onClick={onToggleFavorite}
           >
-            {isFavorite ? '❤️' : '🤍'}
+            <Icons.Zap
+              size="sm"
+              className={isFavorite ? "text-red-500" : "text-gray-400"}
+            />
           </button>
         </div>
 
@@ -538,7 +602,9 @@ const TipCard: React.FC<{
         <div className="tip-stats">
           <div className="stat">
             <span className="stat-label">Impact:</span>
-            <span className="stat-value">{getImpactStars(tip.estimatedImpact)}</span>
+            <span className="stat-value">
+              {getImpactStars(tip.estimatedImpact)}
+            </span>
           </div>
           <div className="stat">
             <span className="stat-label">Temps:</span>
@@ -553,8 +619,14 @@ const TipCard: React.FC<{
               size="sm"
               onClick={onToggleExpand}
             >
-              {isExpanded ? 'Masquer' : 'Voir exemples'} 
-              {isExpanded ? ' ⬆️' : ' ⬇️'}
+              <span className="flex items-center gap-1">
+                {isExpanded ? "Masquer" : "Voir exemples"}
+                {isExpanded ? (
+                  <Icons.Cancel size="xs" />
+                ) : (
+                  <Icons.Add size="xs" />
+                )}
+              </span>
             </EnhancedUI.GlowButton>
           </div>
         )}
@@ -720,104 +792,108 @@ const TipCard: React.FC<{
         `}</style>
       </div>
     </EnhancedUI.MicroInteraction>
-  )
-}
+  );
+};
 
 // Générer les données de conseils
 function generateTipsData(): TipCategory[] {
   return [
     {
-      id: 'study',
-      name: 'Étude',
-      description: 'Techniques d\'étude efficaces',
-      icon: '📚',
-      color: '#4CAF50',
+      id: "study",
+      name: "Étude",
+      description: "Techniques d'étude efficaces",
+      icon: <Icons.Decks size="md" />,
+      color: "#4CAF50",
       tips: [
         {
-          id: 'study-1',
-          title: 'La technique Pomodoro',
-          description: 'Divisez vos sessions d\'étude en blocs de 25 minutes avec des pauses de 5 minutes.',
-          category: 'study',
-          difficulty: 'beginner',
+          id: "study-1",
+          title: "La technique Pomodoro",
+          description:
+            "Divisez vos sessions d'étude en blocs de 25 minutes avec des pauses de 5 minutes.",
+          category: "study",
+          difficulty: "beginner",
           estimatedImpact: 8,
           timeToImplement: 5,
-          icon: '🍅',
+          icon: "🍅",
           isPersonalized: false,
           examples: [
-            '25 min d\'étude + 5 min de pause',
-            'Après 4 cycles, prenez une pause de 30 minutes',
-            'Éliminez toutes les distractions pendant les 25 minutes'
-          ]
+            "25 min d'étude + 5 min de pause",
+            "Après 4 cycles, prenez une pause de 30 minutes",
+            "Éliminez toutes les distractions pendant les 25 minutes",
+          ],
         },
         {
-          id: 'study-2',
-          title: 'Révision espacée optimale',
-          description: 'Révisez les cartes selon des intervalles croissants pour maximiser la rétention.',
-          category: 'study',
-          difficulty: 'intermediate',
+          id: "study-2",
+          title: "Révision espacée optimale",
+          description:
+            "Révisez les cartes selon des intervalles croissants pour maximiser la rétention.",
+          category: "study",
+          difficulty: "intermediate",
           estimatedImpact: 9,
           timeToImplement: 10,
-          icon: '📅',
+          icon: "📅",
           isPersonalized: false,
           examples: [
-            'Jour 1: Première révision',
-            'Jour 3: Deuxième révision',
-            'Jour 7: Troisième révision',
-            'Jour 21: Quatrième révision'
-          ]
-        }
-      ]
+            "Jour 1: Première révision",
+            "Jour 3: Deuxième révision",
+            "Jour 7: Troisième révision",
+            "Jour 21: Quatrième révision",
+          ],
+        },
+      ],
     },
     {
-      id: 'memory',
-      name: 'Mémoire',
-      description: 'Techniques de mémorisation',
-      icon: '🧠',
-      color: '#2196F3',
+      id: "memory",
+      name: "Mémoire",
+      description: "Techniques de mémorisation",
+      icon: <Icons.Study size="md" />,
+      color: "#2196F3",
       tips: [
         {
-          id: 'memory-1',
-          title: 'Palais de mémoire',
-          description: 'Associez les informations à des lieux familiers pour améliorer la mémorisation.',
-          category: 'memory',
-          difficulty: 'advanced',
+          id: "memory-1",
+          title: "Palais de mémoire",
+          description:
+            "Associez les informations à des lieux familiers pour améliorer la mémorisation.",
+          category: "memory",
+          difficulty: "advanced",
           estimatedImpact: 9,
           timeToImplement: 30,
-          icon: '🏰',
+          icon: <Icons.Settings size="md" />,
           isPersonalized: false,
           examples: [
-            'Choisissez un lieu familier (votre maison)',
-            'Assignez chaque information à une pièce',
-            'Créez un parcours mental logique',
-            'Visualisez les objets de manière exagérée'
-          ]
-        }
-      ]
+            "Choisissez un lieu familier (votre maison)",
+            "Assignez chaque information à une pièce",
+            "Créez un parcours mental logique",
+            "Visualisez les objets de manière exagérée",
+          ],
+        },
+      ],
     },
     {
-      id: 'motivation',
-      name: 'Motivation',
-      description: 'Maintenir la motivation',
-      icon: '🔥',
-      color: '#FF9800',
+      id: "motivation",
+      name: "Motivation",
+      description: "Maintenir la motivation",
+      icon: <Icons.Zap size="md" />,
+      color: "#FF9800",
       tips: [
         {
-          id: 'motivation-1',
-          title: 'Système de récompenses',
-          description: 'Créez un système de récompenses personnelles pour maintenir votre motivation.',
-          category: 'motivation',
-          difficulty: 'beginner',
+          id: "motivation-1",
+          title: "Système de récompenses",
+          description:
+            "Créez un système de récompenses personnelles pour maintenir votre motivation.",
+          category: "motivation",
+          difficulty: "beginner",
           estimatedImpact: 7,
           timeToImplement: 15,
-          icon: '🎁',
+          icon: "🎁",
           isPersonalized: false,
           examples: [
-            'Récompense après 50 cartes: pause café',
-            'Récompense après une semaine: sortie cinéma',
-            'Récompense après un mois: achat plaisir'
-          ]
-        }
-      ]
-    }
-  ]
+            "Récompense après 50 cartes: pause café",
+            "Récompense après une semaine: sortie cinéma",
+            "Récompense après un mois: achat plaisir",
+          ],
+        },
+      ],
+    },
+  ];
 }

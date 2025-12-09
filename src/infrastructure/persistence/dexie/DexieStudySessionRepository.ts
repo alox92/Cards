@@ -1,6 +1,7 @@
 import { aribaDB } from './AribaDB'
 import type { StudySessionRepository } from '@/domain/repositories/StudySessionRepository'
 import type { StudySession } from '@/domain/entities/StudySession'
+import { logger } from '@/utils/logger'
 
 /**
  * Repository Dexie pour les sessions d'étude
@@ -20,11 +21,11 @@ export class DexieStudySessionRepository implements StudySessionRepository {
         if (existing === 0){
           await aribaDB.sessions.bulkPut(sessions)
           // Optionnel: ne pas supprimer tout de suite; pourrait servir de backup
-          console.log(`🔄 Migration sessions => Dexie: ${sessions.length} sessions migrées`)
+          logger.info('Migration', `🔄 Migration sessions => Dexie: ${sessions.length} sessions migrées`, { sessionsCount: sessions.length })
         }
       }
     } catch(e){
-      console.warn('Migration sessions vers Dexie échouée', e)
+      logger.warn('Migration', 'Migration sessions vers Dexie échouée', { error: e })
     }
   }
   async getRecent(limit: number = 50): Promise<StudySession[]> {

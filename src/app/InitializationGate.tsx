@@ -28,11 +28,11 @@ export function InitializationGate({ theme, loadSettings, initializeDemoData, de
   useEffect(()=>{
     let cancelled = false
     const initializeApp = async () => {
-      logger.info('App', '🚀 Démarrage de l\'initialisation de Cards', { userAgent: navigator.userAgent, timestamp: Date.now(), env: process.env.NODE_ENV })
+  logger.info('App', '🚀 Démarrage de l\'initialisation de Cards', { userAgent: navigator.userAgent, timestamp: Date.now(), env: (import.meta as any).env?.MODE })
       try {
         logger.startTimer('app-initialization')
         logger.debug('Performance', '🎮 Warmup GPU pour optimisations 120fps')
-        PerformanceOptimizer.scheduleIdle(()=>{ scheduleGPUWarmup(200); if(process.env.NODE_ENV === 'development'){ getFPSMonitor().start() } },300)
+  PerformanceOptimizer.scheduleIdle(()=>{ scheduleGPUWarmup(200); if((import.meta as any).env?.DEV){ getFPSMonitor().start() } },300)
         logger.debug('Settings', '⚙️  Chargement des paramètres utilisateur')
         await loggedPromise(loadSettings(), 'Settings', 'Chargement paramètres')
         logger.debug('Data', '🎯 Initialisation des données de démonstration')
@@ -50,7 +50,7 @@ export function InitializationGate({ theme, loadSettings, initializeDemoData, de
       }
     }
     initializeApp()
-    if(process.env.NODE_ENV === 'development'){ reportWebVitals() }
+  if((import.meta as any).env?.DEV){ reportWebVitals() }
     const handleVisibility = () => { const monitor = getFPSMonitor(); const ftm = getFluidTransitionMastery(); if(document.hidden){ monitor.pause(); ftm.pauseAll() } else { monitor.resume(); ftm.resumeAll() } }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => { cancelled = true; document.removeEventListener('visibilitychange', handleVisibility) }

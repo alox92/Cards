@@ -19,15 +19,19 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
 
     /* Path mapping */
     "baseUrl": ".",
+    "ignoreDeprecations": "5.0",
     "paths": {
       "@/*": ["src/*"],
       "@/core/*": ["src/core/*"],
       "@/data/*": ["src/data/*"],
       "@/domain/*": ["src/domain/*"],
-  "@/application/*": ["src/application/*"],
+      "@/application/*": ["src/application/*"],
       "@/ui/*": ["src/ui/*"],
       "@/utils/*": ["src/utils/*"]
     }

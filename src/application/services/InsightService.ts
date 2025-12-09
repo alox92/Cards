@@ -54,7 +54,10 @@ export class InsightService {
       await PerformanceOptimizer.yieldToMain(8)
     }
     const studiedIds = new Set<string>()
-    for(const s of sessions.slice(0,30)){ for(const id of (s as any).cardIds || []) studiedIds.add(id) }
+    for(const s of sessions.slice(0,30)){
+      const ids = s.cardIds || []
+      for(const id of ids){ studiedIds.add(id) }
+    }
     const tagStudied: Record<string, number> = {}
     for(const c of cards){ if(studiedIds.has(c.id)){ for(const t of (c.tags||[])){ tagStudied[t] = (tagStudied[t]||0)+1 } } }
     const neglected = Object.keys(tagCounts).map(t=> ({ t, ratio: (tagStudied[t]||0)/tagCounts[t], count: tagCounts[t] })).filter(x=> x.count>=5 && x.ratio < 0.15).sort((a,b)=> a.ratio - b.ratio).slice(0,2)

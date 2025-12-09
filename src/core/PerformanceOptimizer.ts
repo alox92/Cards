@@ -5,6 +5,8 @@
  * et applique des optimisations automatiques pour maintenir une UX fluide.
  */
 
+import { logger } from '@/utils/logger'
+
 export interface PerformanceMetrics {
   // Métriques temporelles
   fps: number
@@ -114,11 +116,25 @@ export class PerformanceOptimizer extends EventTarget {
   private isMonitoring = false
   private fpsHistory: number[] = []
   private memoryHistory: number[] = []
+  private frameBudgetMs = 16.7
+  private lastFrameTs = performance.now()
+  private rafId: number | null = null
+  private longTaskObserver?: PerformanceObserver
+  private calmFrames = 0
   
   private webWorkers: Map<string, Worker> = new Map()
   private workerPool: WorkerPool | null = null
   private taskQueue: Array<() => Promise<void>> = []
   private isProcessingTasks = false
+  // Scheduler multi‑priorités
+  private schedQueues: Record<'critical'|'high'|'normal'|'background', Array<{ fn: ()=>void|Promise<void>; added:number; id:number }>> = {
+    critical: [], high: [], normal: [], background: []
+  }
+  private schedLastId = 0
+  private schedStats = { executed: 0, dropped: 0, lastExecDur: 0 }
+  private fpsSamples: number[] = []
+  private fpsP95 = 0
+  private fpsP99 = 0
 
   constructor() {
     super()
@@ -146,6 +162,8 @@ export class PerformanceOptimizer extends EventTarget {
     this.setupIntersectionObserver()
     this.setupMutationObserver()
     this.collectWebVitals()
+  this.setupLongTaskObserver()
+  this.startRafLoop()
   }
 
   /**
@@ -166,8 +184,75 @@ export class PerformanceOptimizer extends EventTarget {
         entryTypes: ['measure', 'navigation', 'paint', 'layout-shift', 'first-input']
       })
     } catch (error) {
-      console.warn('Certaines métriques Performance API non supportées:', error)
+      logger.warn('PerformanceOptimizer', 'Certaines métriques Performance API non supportées', { error })
     }
+  }
+
+  private setupLongTaskObserver(){
+    if(!('PerformanceObserver' in window)) return
+    try {
+      this.longTaskObserver = new PerformanceObserver((list)=>{
+        for(const entry of list.getEntries()){
+          // long task budgeting: si >50ms, augmenter budget adaptatif / réduire tâches background
+          if(entry.duration > 50){
+            this.metrics.totalBlockingTime += entry.duration
+            // Ajuster frame budget (dégrader) pour laisser respirer UI
+            this.frameBudgetMs = Math.min(25, this.frameBudgetMs + 1)
+            this.calmFrames = 0 // reset calm sequence
+          }
+        }
+      })
+      this.longTaskObserver.observe({ entryTypes: ['longtask'] as any })
+    } catch {}
+  }
+
+  private startRafLoop(){
+    const loop = ()=>{
+      const now = performance.now()
+      const dt = now - this.lastFrameTs
+      this.lastFrameTs = now
+      const fps = 1000 / dt
+      if(isFinite(fps)) this.updateFPS(fps)
+      // Frame budget tracker: temps restant pour tâches coopératives
+      const remaining = this.frameBudgetMs - dt
+      ;(this as any).frameRemaining = remaining
+      // Exécuter scheduler tant qu'il reste du temps (>2ms) en priorité décroissante
+      try {
+        let guard = 0
+        const startExec = performance.now()
+        while(performance.now() - startExec < remaining - 2 && guard < 50){
+          guard++
+          const next = this.dequeueSchedTask()
+          if(!next) break
+          const t0 = performance.now()
+          try { const r = next.fn(); if(r && typeof (r as any).then === 'function') (r as Promise<any>).catch(()=>{}) } catch{/* ignore */}
+          this.schedStats.lastExecDur = performance.now() - t0
+          this.schedStats.executed++
+        }
+      } catch {/* ignore scheduler errors */}
+      // Auto-downgrade frameBudget si frames calmes successives
+      if(dt < (this.frameBudgetMs * 0.7)) this.calmFrames++; else this.calmFrames = 0
+      if(this.calmFrames > 120 && this.frameBudgetMs > 12){
+        this.frameBudgetMs -= 1
+        this.calmFrames = 0
+      }
+      this.rafId = requestAnimationFrame(loop)
+    }
+    this.rafId = requestAnimationFrame(loop)
+  }
+  /** Ajoute une tâche planifiée avec priorité */
+  public schedule(fn: ()=>void|Promise<void>, priority: 'critical'|'high'|'normal'|'background'='normal'){
+    const q = this.schedQueues[priority]
+    q.push({ fn, added: performance.now(), id: ++this.schedLastId })
+    // Petit contrôle anti-gonflement: si trop d'éléments background, purge anciens
+    if(priority==='background' && q.length > 500){ q.splice(0, q.length-500); this.schedStats.dropped += q.length-500 }
+  }
+  private dequeueSchedTask(){
+    if(this.schedQueues.critical.length) return this.schedQueues.critical.shift()
+    if(this.schedQueues.high.length) return this.schedQueues.high.shift()
+    if(this.schedQueues.normal.length) return this.schedQueues.normal.shift()
+    if(this.schedQueues.background.length) return this.schedQueues.background.shift()
+    return null
   }
 
   /**
@@ -301,7 +386,7 @@ export class PerformanceOptimizer extends EventTarget {
       this.dispatchMetricsUpdate()
     }, 1000) // Toutes les secondes
 
-    console.log('📊 Performance Optimizer - Monitoring démarré')
+    logger.info('PerformanceOptimizer', '📊 Performance Optimizer - Monitoring démarré')
   }
 
   /**
@@ -317,7 +402,7 @@ export class PerformanceOptimizer extends EventTarget {
       this.monitoringInterval = null
     }
 
-    console.log('📊 Performance Optimizer - Monitoring arrêté')
+    logger.info('PerformanceOptimizer', '📊 Performance Optimizer - Monitoring arrêté')
   }
 
   /**
@@ -379,7 +464,7 @@ export class PerformanceOptimizer extends EventTarget {
    */
   private async executeOptimizationRule(rule: OptimizationRule): Promise<void> {
     try {
-      console.log(`🔧 Exécution règle: ${rule.name}`)
+      logger.debug('PerformanceOptimizer', `🔧 Exécution règle: ${rule.name}`)
       
       await rule.action()
       rule.lastExecuted = Date.now()
@@ -389,7 +474,7 @@ export class PerformanceOptimizer extends EventTarget {
   globalEventBus.emit('optimization', payload)
       
     } catch (error) {
-      console.error(`Erreur lors de l'exécution de la règle ${rule.name}:`, error)
+      logger.error('PerformanceOptimizer', `Erreur lors de l'exécution de la règle ${rule.name}`, { error })
     }
   }
 
@@ -411,7 +496,7 @@ export class PerformanceOptimizer extends EventTarget {
    * Effectue un nettoyage mémoire
    */
   private async performMemoryCleanup(): Promise<void> {
-    console.log('🧹 Nettoyage mémoire en cours...')
+    logger.info('PerformanceOptimizer', '🧹 Nettoyage mémoire en cours...')
     
     // Nettoyer les caches inutilisés
     this.dispatchEvent(new CustomEvent('optimize', {
@@ -426,14 +511,14 @@ export class PerformanceOptimizer extends EventTarget {
     // Simulation du nettoyage
     await new Promise(resolve => setTimeout(resolve, 100))
     
-    console.log('✅ Nettoyage mémoire terminé')
+    logger.info('PerformanceOptimizer', '✅ Nettoyage mémoire terminé')
   }
 
   /**
    * Active le lazy loading pour les éléments
    */
   private enableLazyLoading(): void {
-    console.log('⚡ Activation du lazy loading...')
+    logger.info('PerformanceOptimizer', '⚡ Activation du lazy loading...')
     
     const imageElements = document.querySelectorAll('img[src]:not([data-lazy])')
     const videoElements = document.querySelectorAll('video[src]:not([data-lazy])')
@@ -452,7 +537,7 @@ export class PerformanceOptimizer extends EventTarget {
    * Délègue les tâches aux Web Workers
    */
   private offloadTasksToWorkers(): void {
-  console.log('👷 Délégation aux Web Workers via WorkerPool...')
+  logger.info('PerformanceOptimizer', '👷 Délégation aux Web Workers via WorkerPool...')
   if(!this.workerPool){ this.workerPool = new WorkerPool(2, createComputationWorker) }
   }
 
@@ -460,7 +545,7 @@ export class PerformanceOptimizer extends EventTarget {
    * Effectue un preload intelligent
    */
   private async performIntelligentPreload(): Promise<void> {
-    console.log('🧠 Preload intelligent en cours...')
+    logger.info('PerformanceOptimizer', '🧠 Preload intelligent en cours...')
     
   const detail = { type: 'preload', action: 'anticipate' }
   this.dispatchEvent(new CustomEvent('optimize', { detail }))
@@ -474,7 +559,7 @@ export class PerformanceOptimizer extends EventTarget {
    * Optimise les changements DOM
    */
   private async optimizeDOMChanges(): Promise<void> {
-    console.log('📝 Optimisation des changements DOM...')
+    logger.info('PerformanceOptimizer', '📝 Optimisation des changements DOM...')
     
     // Utiliser DocumentFragment pour les modifications en lot
   const detail = { type: 'dom', action: 'batchUpdates' }
@@ -504,7 +589,7 @@ export class PerformanceOptimizer extends EventTarget {
         try {
           await task()
         } catch (error) {
-          console.error('Erreur lors du traitement de tâche:', error)
+          logger.error('PerformanceOptimizer', 'Erreur lors du traitement de tâche', { error })
         }
       }
       
@@ -521,6 +606,16 @@ export class PerformanceOptimizer extends EventTarget {
   public updateFPS(fps: number): void {
     this.metrics.fps = fps
     this.metrics.frameTime = 1000 / fps
+    // Collecter échantillons pour percentiles
+    this.fpsSamples.push(fps)
+    if(this.fpsSamples.length > 120) this.fpsSamples.shift()
+    if(this.fpsSamples.length >= 10){
+      const sorted = [...this.fpsSamples].sort((a,b)=> a-b)
+      const p95Idx = Math.min(sorted.length-1, Math.floor(sorted.length*0.95))
+      const p99Idx = Math.min(sorted.length-1, Math.floor(sorted.length*0.99))
+      this.fpsP95 = sorted[p95Idx]
+      this.fpsP99 = sorted[p99Idx]
+    }
   }
 
   /**
@@ -545,6 +640,11 @@ export class PerformanceOptimizer extends EventTarget {
     }
     globalEventBus.emit('performance', { metrics: { ...this.metrics } })
   } catch { globalEventBus.emit('performance', { metrics: { ...this.metrics } }) }
+  ;(window as any).__PERF_SCHED__ = {
+    queues: Object.fromEntries(Object.entries(this.schedQueues).map(([k,v])=> [k, v.length])),
+    stats: { ...this.schedStats },
+    fpsP95: this.fpsP95, fpsP99: this.fpsP99
+  }
   }
 
   /**
@@ -597,6 +697,7 @@ export class PerformanceOptimizer extends EventTarget {
    */
   public cleanup(): void {
     this.stopMonitoring()
+  if(this.rafId){ cancelAnimationFrame(this.rafId); this.rafId = null }
     
     // Nettoyer les observers
     Object.values(this.observers).forEach(observer => {
@@ -615,6 +716,6 @@ export class PerformanceOptimizer extends EventTarget {
     this.taskQueue = []
     this.optimizationRules.clear()
     
-    console.log('🧹 Performance Optimizer nettoyé')
+    logger.info('PerformanceOptimizer', '🧹 Performance Optimizer nettoyé')
   }
 }

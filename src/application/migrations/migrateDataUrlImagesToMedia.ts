@@ -2,7 +2,7 @@ import { container } from '@/application/Container'
 import { CARD_REPOSITORY_TOKEN } from '@/domain/repositories/CardRepository'
 import type { CardRepository } from '@/domain/repositories/CardRepository'
 import { MEDIA_REPOSITORY_TOKEN, DexieMediaRepository } from '@/infrastructure/persistence/dexie/DexieMediaRepository'
-import { CardEntity } from '@/domain/entities/Card'
+import { logger } from '@/utils/logger'
 
 const isDataUrl = (v?: string) => !!v && v.startsWith('data:image/')
 
@@ -18,14 +18,14 @@ export async function migrateDataUrlImagesToMedia(){
   for(const card of cards){
     let mutated = false
     if(isDataUrl(card.frontImage)){
-      try { const blob = await (await fetch(card.frontImage!)).blob(); const ref = await mediaRepo.save(blob,'image', blob.type); card.frontImage = ref.id; (card.mediaRefs ||= []).push(ref); mutated = true } catch(e){ console.warn('Migration frontImage échouée', card.id, e) }
+      try { const img = card.frontImage; if(img){ const blob = await (await fetch(img)).blob(); const ref = await mediaRepo.save(blob,'image', blob.type); card.frontImage = ref.id; (card.mediaRefs ||= []).push(ref); mutated = true } } catch(e){ logger.warn('Migration', 'Migration frontImage échouée', { cardId: card.id, error: e }) }
     }
     if(isDataUrl(card.backImage)){
-      try { const blob = await (await fetch(card.backImage!)).blob(); const ref = await mediaRepo.save(blob,'image', blob.type); card.backImage = ref.id; (card.mediaRefs ||= []).push(ref); mutated = true } catch(e){ console.warn('Migration backImage échouée', card.id, e) }
+      try { const img = card.backImage; if(img){ const blob = await (await fetch(img)).blob(); const ref = await mediaRepo.save(blob,'image', blob.type); card.backImage = ref.id; (card.mediaRefs ||= []).push(ref); mutated = true } } catch(e){ logger.warn('Migration', 'Migration backImage échouée', { cardId: card.id, error: e }) }
     }
     if(mutated){
       converted++
-      await cardRepo.update(card as CardEntity)
+      await cardRepo.update(card)
     }
   }
   return { total: cards.length, converted }
@@ -38,9 +38,9 @@ if(typeof window !== 'undefined' && !(window as any).__ARIBA_MIGRATION_DISABLED_
     const already = ls?.getItem?.(LS_KEY)
     if(!already){
       migrateDataUrlImagesToMedia().then(r => {
-        if(r.converted>0){ console.info(`[Migration] Images converties DataURL->media: ${r.converted}/${r.total}`) }
+        if(r.converted>0){ logger.info('Migration', `[Migration] Images converties DataURL->media: ${r.converted}/${r.total}`, { converted: r.converted, total: r.total }) }
         try { ls?.setItem?.(LS_KEY, Date.now().toString()) } catch {}
-      }).catch(e => console.warn('[Migration] Échec migration images', e))
+      }).catch(e => logger.warn('Migration', '[Migration] Échec migration images', { error: e }))
     }
   } catch {}
 }

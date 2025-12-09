@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { container } from '@/application/Container'
 import { STUDY_SESSION_SERVICE_TOKEN, StudySessionService } from '@/application/services/StudySessionService'
 import type { CardEntity } from '@/domain/entities/Card'
+import { useConcurrentTransition } from '@/utils/reactConcurrentFeatures'
+import { webWorkerManager } from '@/utils/webWorkerManager'
 
 interface UseStudyQueueOptions { deckId: string; dailyNewLimit: number }
 
@@ -9,22 +11,84 @@ export function useStudyQueue({ deckId, dailyNewLimit }: UseStudyQueueOptions) {
   const [queue, setQueue] = useState<CardEntity[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const service = container.resolve<StudySessionService>(STUDY_SESSION_SERVICE_TOKEN)
+  const { executeTransition } = useConcurrentTransition()
+  
+  // Memoize service resolution to avoid recreation
+  const service = useMemo(() => 
+    container.resolve<StudySessionService>(STUDY_SESSION_SERVICE_TOKEN), 
+    []
+  )
 
   const build = useCallback(async () => {
-    setLoading(true); setError(null)
-    try { setQueue(await service.buildQueue(deckId, dailyNewLimit)) } catch(e:any){ setError(e.message||'Erreur queue') } finally { setLoading(false) }
-  }, [service, deckId, dailyNewLimit])
+    setLoading(true)
+    setError(null)
+    
+    try {
+      const newQueue = await service.buildQueue(deckId, dailyNewLimit)
+      
+      // Use transition for large queue updates to avoid blocking UI
+      if (newQueue.length > 50) {
+        executeTransition(() => {
+          setQueue(newQueue)
+        })
+      } else {
+        setQueue(newQueue)
+      }
+    } catch(e: any) {
+      setError(e.message || 'Erreur queue')
+    } finally {
+      setLoading(false)
+    }
+  }, [service, deckId, dailyNewLimit, executeTransition])
 
   const record = useCallback(async (card: CardEntity, quality: number, responseTimeMs: number) => {
-    await service.recordAnswer(card, quality, responseTimeMs)
-    // Supprime la carte du début de file si c'est celle traitée
-    setQueue(q => q.filter(c => c.id !== card.id))
-  }, [service])
+    try {
+      // Record answer - potentially expensive operation
+      await service.recordAnswer(card, quality, responseTimeMs)
+      
+      // Use web worker for SM-2 calculation if enabled
+      if (quality !== undefined && card.easinessFactor !== undefined) {
+        try {
+          await webWorkerManager.executeSpacedRepetition({
+            cardData: {
+              easinessFactor: card.easinessFactor,
+              interval: card.interval || 1,
+              repetition: card.repetition || 0
+            },
+            quality
+          })
+          
+          // SM-2 calculation completed
+        } catch (workerError) {
+          // SM-2 worker fallback silencieux
+        }
+      }
+      
+      // Remove card from queue using transition for smooth UI
+      executeTransition(() => {
+        setQueue(q => q.filter(c => c.id !== card.id))
+      })
+    } catch (error) {
+      // Erreur enregistrement réponse
+      throw error
+    }
+  }, [service, executeTransition])
 
-  useEffect(() => { void build() }, [build])
+  // Memoize the dependencies to prevent unnecessary rebuilds
+  const dependencies = useMemo(() => ({ deckId, dailyNewLimit }), [deckId, dailyNewLimit])
 
-  return { queue, loading, error, rebuild: build, record }
+  useEffect(() => { 
+    void build() 
+  }, [build, dependencies.deckId, dependencies.dailyNewLimit])
+
+  // Memoize return value to prevent unnecessary re-renders
+  return useMemo(() => ({
+    queue,
+    loading,
+    error,
+    rebuild: build,
+    record
+  }), [queue, loading, error, build, record])
 }
 
 export default useStudyQueue

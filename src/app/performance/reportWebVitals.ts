@@ -1,6 +1,7 @@
 // Web Vitals integration (Phase 1). Logs to console for now; can be wired to analytics later.
 import { onCLS, onINP, onLCP, onFID, onTTFB, onFCP } from 'web-vitals'
 import { logger } from '@/utils/logger'
+import { recordVital } from '@/app/monitoring/monitoring'
 import { silentCatch } from '../../utils/silentCatch'
 
 export interface WebVitalMetric { name: string; value: number; rating: string; delta?: number }
@@ -13,6 +14,7 @@ export function reportWebVitals(reporter: Reporter = defaultReporter){
     if(!w.__WEB_VITALS__) w.__WEB_VITALS__ = {}
     if(!w.__WEB_VITALS_HISTORY__) w.__WEB_VITALS_HISTORY__ = []
     if(!w.__WEB_VITALS_BY_NAME__) w.__WEB_VITALS_BY_NAME__ = {}
+    if(!w.__WEB_VITALS_HISTOGRAM__) w.__WEB_VITALS_HISTOGRAM__ = {}
   }
   const wrap = (name: string, ratingFallback='na') => (m: any) => {
     const metric: WebVitalMetric = { name, value: m.value, rating: m.rating || ratingFallback }
@@ -26,9 +28,14 @@ export function reportWebVitals(reporter: Reporter = defaultReporter){
       const arr = (w.__WEB_VITALS_BY_NAME__[name] ||= [])
       arr.push(metric.value)
       if(arr.length > 60) arr.splice(0, arr.length - 60)
+      // Histogramme (bucket log-scale approx)
+      const hist = (w.__WEB_VITALS_HISTOGRAM__[name] ||= {})
+      const bucket = Math.pow(2, Math.floor(Math.log2(Math.max(1, metric.value)))) // 1,2,4,8...
+      hist[bucket] = (hist[bucket]||0)+1
     } catch(e){ silentCatch('webVitals.store', e) }
     try { logger.info('WebVitals', name, metric) } catch(e){ silentCatch('webVitals.log', e) }
-    reporter(metric)
+  try { recordVital(metric) } catch {}
+  reporter(metric)
   }
   onCLS(wrap('CLS'))
   onLCP(wrap('LCP'))

@@ -3,6 +3,7 @@ import { useOcclusionCanvas } from './useOcclusionCanvas'
 import type { CardEntity } from '@/domain/entities/Card'
 import { container } from '@/application/Container'
 import { MEDIA_REPOSITORY_TOKEN, DexieMediaRepository } from '@/infrastructure/persistence/dexie/DexieMediaRepository'
+import { logger } from '@/utils/logger'
 
 interface Props { card: CardEntity; showBack: boolean }
 
@@ -70,7 +71,7 @@ const OcclusionStudyCard: React.FC<Props> = ({ card, showBack }) => {
     let revoke: string | null = null
     if(!imageIdOrData){ setResolvedSrc(undefined); return }
     if(imageIdOrData.startsWith('data:')) { setResolvedSrc(imageIdOrData); return }
-    (async ()=> { try { const row = await mediaRepo.get(imageIdOrData); if(row){ const url = URL.createObjectURL(row.blob); revoke = url; setResolvedSrc(url) } } catch(e){ console.warn('Media load failed', e); setResolvedSrc(undefined) } })()
+    (async ()=> { try { const row = await mediaRepo.get(imageIdOrData); if(row){ const url = URL.createObjectURL(row.blob); revoke = url; setResolvedSrc(url) } } catch(e){ logger.warn('OcclusionStudyCard', 'Media load failed', { error: e }); setResolvedSrc(undefined) } })()
     return ()=> { if(revoke) URL.revokeObjectURL(revoke) }
   }, [imageIdOrData, mediaRepo])
 

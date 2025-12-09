@@ -1,5 +1,7 @@
-// Simple event bus (Phase 2) pour remplacer l’usage dispersé de EventTarget.
+// Simple event bus (Phase 2) pour remplacer l'usage dispersé de EventTarget.
 // Pattern minimal inspiré de mitt, typable via generics.
+
+import { logger } from '@/utils/logger'
 
 export type EventMap = Record<string, any>
 
@@ -28,7 +30,7 @@ export function createEventBus<Events extends EventMap = any>(): EventBus<Events
       const set = all.get(type as string)
       if(!set) return
       for(const fn of Array.from(set)){
-        try { fn(event) } catch(e){ /* eslint-disable no-console */ console.error('EventBus handler error', e) }
+        try { fn(event) } catch(e){ logger.error('EventBus', 'EventBus handler error', { error: e }) }
       }
     },
     clear(){ all.clear() }

@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { getFluidTransitionMastery, FluidTransitionMastery } from '../../../core/FluidTransitionMastery'
 import { PerformanceOptimizer } from '../../../core/PerformanceOptimizer'
+import Icons from '../../components/common/Icons'
 
 interface StatsData {
   totalCards: number
@@ -30,7 +31,7 @@ interface Achievement {
   id: string
   title: string
   description: string
-  icon: string
+  icon: React.ReactNode
   unlockedAt?: number
   progress: number
   maxProgress: number
@@ -138,7 +139,7 @@ export const AdvancedStats: React.FC = () => {
         id: 'first-card',
         title: 'Premier Pas',
         description: 'Étudiez votre première carte',
-        icon: '🎯',
+        icon: <Icons.Target size="md" />,
         unlockedAt: Date.now() - 86400000,
         progress: 1,
         maxProgress: 1,
@@ -149,7 +150,7 @@ export const AdvancedStats: React.FC = () => {
         id: 'streak-7',
         title: 'Une Semaine!',
         description: 'Maintenez un streak de 7 jours',
-        icon: '🔥',
+        icon: <Icons.Zap size="md" />,
         unlockedAt: Date.now() - 3600000,
         progress: 7,
         maxProgress: 7,
@@ -160,7 +161,7 @@ export const AdvancedStats: React.FC = () => {
         id: 'speed-demon',
         title: 'Démon de Vitesse',
         description: 'Répondez à 50 cartes en moins de 30 secondes',
-        icon: '⚡',
+        icon: <Icons.Zap size="md" />,
         progress: 42,
         maxProgress: 50,
         rarity: 'epic',
@@ -359,14 +360,14 @@ export const AdvancedStats: React.FC = () => {
           className={`nav-btn ${activeView === 'overview' ? 'active' : ''}`}
           onClick={() => changeView('overview')}
         >
-          <span className="nav-icon">📊</span>
+          <span className="nav-icon"><Icons.Stats size="sm" /></span>
           Vue d'ensemble
         </button>
         <button
           className={`nav-btn ${activeView === 'detailed' ? 'active' : ''}`}
           onClick={() => changeView('detailed')}
         >
-          <span className="nav-icon">📈</span>
+          <span className="nav-icon"><Icons.TrendUp size="sm" /></span>
           Détaillé
         </button>
         <button
@@ -561,7 +562,7 @@ const OverviewView: React.FC<{
   <div className="overview-grid">
     <div className="stat-card level-card">
       <div className="card-header">
-        <span className="card-icon">⭐</span>
+        <span className="card-icon"><Icons.Zap size="md" className="text-yellow-500" /></span>
         <h3>Niveau {statsData.level}</h3>
       </div>
       <div className="xp-progress">
@@ -579,7 +580,7 @@ const OverviewView: React.FC<{
 
     <div className="stat-card">
       <div className="card-header">
-        <span className="card-icon">🔥</span>
+        <span className="card-icon"><Icons.Zap size="md" /></span>
         <h3>Streak</h3>
       </div>
       <div className="stat-value">{statsData.streak} jours</div>
@@ -587,7 +588,7 @@ const OverviewView: React.FC<{
 
     <div className="stat-card">
       <div className="card-header">
-        <span className="card-icon">🎯</span>
+        <span className="card-icon"><Icons.Target size="md" /></span>
         <h3>Précision</h3>
       </div>
       <div className="stat-value">{statsData.accuracy.toFixed(1)}%</div>
@@ -595,7 +596,7 @@ const OverviewView: React.FC<{
 
     <div className="stat-card">
       <div className="card-header">
-        <span className="card-icon">⏱️</span>
+        <span className="card-icon"><Icons.Clock size="md" /></span>
         <h3>Temps d'étude</h3>
       </div>
       <div className="stat-value">{metrics.studyTimeFormatted}</div>

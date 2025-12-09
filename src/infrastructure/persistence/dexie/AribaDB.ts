@@ -3,14 +3,15 @@ import { CardEntity } from '@/domain/entities/Card'
 import { DeckEntity } from '@/domain/entities/Deck'
 import type { StudySession } from '@/domain/entities/StudySession'
 
-export interface CardRow extends Omit<CardEntity, 'toJSON' | 'clone' | 'getStats' | 'getSuccessRate' | 'isDue' | 'isMature' | 'getRetentionScore'> {}
-export interface DeckRow extends Omit<DeckEntity, 'toJSON' | 'updateStats' | 'calculateStats' | 'recordStudySession'> {}
+export type CardRow = Omit<CardEntity, 'toJSON' | 'clone' | 'getStats' | 'getSuccessRate' | 'isDue' | 'isMature' | 'getRetentionScore'>
+export type DeckRow = Omit<DeckEntity, 'toJSON' | 'updateStats' | 'calculateStats' | 'recordStudySession'>
 
 export class AribaDB extends Dexie {
   cards!: Table<CardRow, string>
   decks!: Table<DeckRow, string>
   sessions!: Table<StudySession, string>
   media!: Table<MediaRow, string>
+  meta!: Table<any, string>
   constructor(){
     super('AribaDB')
     // v1: cards, decks
@@ -72,6 +73,22 @@ export class AribaDB extends Dexie {
       searchIndex: '++id,term,cardId',
       searchTermStats: 'term,count',
       searchTrigrams: '++id,tri,cardId'
+    })
+    // v7: table meta pour tracer les upgrades & permettre future stratégie de sauvegarde/wipe contrôlé
+    this.version(7).stores({
+      cards: 'id, deckId, nextReview',
+      decks: 'id',
+      sessions: 'id, deckId, startTime',
+      media: 'id,type,checksum',
+      searchIndex: '++id,term,cardId',
+      searchTermStats: 'term,count',
+      searchTrigrams: '++id,tri,cardId',
+      meta: 'key'
+    }).upgrade(async tx => {
+      try {
+        const meta = tx.table('meta') as Table<any,string>
+        await meta.put({ key: 'schemaVersion', value: 7, upgradedAt: Date.now() })
+      } catch {/* ignore */}
     })
   }
 }

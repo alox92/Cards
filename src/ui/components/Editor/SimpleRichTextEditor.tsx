@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
+import { escapeHtml } from '@/utils/sanitize'
 
 interface SimpleRichTextEditorProps {
   value: string
@@ -61,7 +62,8 @@ export const SimpleRichTextEditor = ({
   ]
 
   const renderPreview = (text: string) => {
-    return text
+    const esc = escapeHtml(text)
+    return esc
       .replace(/\*\*(.*?)\*\*/g, '<strong class="text-orange-600 dark:text-orange-400 font-bold">$1</strong>')
       .replace(/\*(.*?)\*/g, '<em class="text-purple-600 dark:text-purple-400 italic">$1</em>')
       .replace(/__(.*?)__/g, '<u class="text-blue-600 dark:text-blue-400 underline">$1</u>')

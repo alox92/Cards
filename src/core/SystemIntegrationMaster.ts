@@ -6,6 +6,8 @@
  * pour assurer une performance et une expérience utilisateur optimales.
  */
 
+import { logger } from '@/utils/logger'
+
 export interface SystemStatus {
   isInitialized: boolean
   isActive: boolean
@@ -33,7 +35,7 @@ export class SystemIntegrationMaster {
     loadTime: 0,
     userInteractions: 0
   }
-  private eventListeners: Map<string, Function[]> = new Map()
+  private eventListeners: Map<string, ((data?: unknown) => void)[]> = new Map()
   private performanceInterval: number | null = null
   private isInitialized = false
 
@@ -45,7 +47,7 @@ export class SystemIntegrationMaster {
    * Initialise tous les systèmes d'optimisation
    */
   async initialize(): Promise<void> {
-    console.log('🎯 Initialisation du System Integration Master...')
+    logger.info('SystemIntegrationMaster', 'Initialisation')
     
     try {
       // Initialiser les systèmes dans l'ordre optimal
@@ -58,12 +60,12 @@ export class SystemIntegrationMaster {
       this.setupSystemSynchronization()
       
       this.isInitialized = true
-      console.log('✅ System Integration Master initialisé avec succès')
+      logger.info('SystemIntegrationMaster', 'Initialisé avec succès')
       
       this.emit('initialized', this.getSystemsStatus())
       
     } catch (error) {
-      console.error('❌ Erreur lors de l\'initialisation du System Integration Master:', error)
+      logger.error('SystemIntegrationMaster', 'Erreur initialisation', { error })
       throw error
     }
   }
@@ -84,9 +86,9 @@ export class SystemIntegrationMaster {
     for (const systemName of systemsToInitialize) {
       try {
         await this.initializeSystem(systemName)
-        console.log(`✅ ${systemName} initialisé`)
+        logger.debug('SystemIntegrationMaster', 'Système initialisé', { systemName })
       } catch (error) {
-        console.error(`❌ Erreur initialisation ${systemName}:`, error)
+        logger.error('SystemIntegrationMaster', 'Erreur initialisation système', { systemName, error })
         this.updateSystemStatus(systemName, {
           isInitialized: false,
           isActive: false,
@@ -174,7 +176,7 @@ export class SystemIntegrationMaster {
     }
 
     if (issues.length > 0) {
-      console.warn('⚠️ Problèmes de performance détectés:', issues)
+      logger.warn('SystemIntegrationMaster', '⚠️ Problèmes de performance détectés', { issues })
     }
   }
 
@@ -206,7 +208,7 @@ export class SystemIntegrationMaster {
       const observer = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           if (entry.entryType === 'measure') {
-            console.log(`📊 Performance: ${entry.name} - ${entry.duration}ms`)
+            logger.debug('SystemIntegrationMaster', `📊 Performance: ${entry.name} - ${entry.duration}ms`)
           }
         }
       })
@@ -249,13 +251,13 @@ export class SystemIntegrationMaster {
   /**
    * Émet un événement
    */
-  private emit(eventName: string, data?: any): void {
+  private emit(eventName: string, data?: unknown): void {
     const listeners = this.eventListeners.get(eventName) || []
     listeners.forEach(listener => {
       try {
         listener(data)
       } catch (error) {
-        console.error(`Erreur dans l'event listener ${eventName}:`, error)
+        logger.error('SystemIntegrationMaster', 'Erreur event listener', { eventName, error })
       }
     })
   }
@@ -263,7 +265,7 @@ export class SystemIntegrationMaster {
   /**
    * Ajoute un event listener
    */
-  public on(eventName: string, callback: Function): void {
+  public on(eventName: string, callback: (data?: unknown) => void): void {
     if (!this.eventListeners.has(eventName)) {
       this.eventListeners.set(eventName, [])
     }
@@ -273,7 +275,7 @@ export class SystemIntegrationMaster {
   /**
    * Supprime un event listener
    */
-  public off(eventName: string, callback: Function): void {
+  public off(eventName: string, callback: (data?: unknown) => void): void {
     const listeners = this.eventListeners.get(eventName) || []
     const index = listeners.indexOf(callback)
     if (index > -1) {
@@ -315,6 +317,6 @@ export class SystemIntegrationMaster {
     this.systems.clear()
     this.isInitialized = false
     
-    console.log('🛑 System Integration Master arrêté')
+    logger.info('SystemIntegrationMaster', 'Arrêté')
   }
 }

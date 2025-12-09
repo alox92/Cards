@@ -1,53 +1,50 @@
-# Dependencies
-node_modules/
+# ========================================
+# ARIBA JS - Configuration Git Ignore
+# ========================================
 
-# Build output
+# === DEPENDENCIES ===
+node_modules/
+/.pnp
+.pnp.js
+
+# === BUILD OUTPUT ===
 dist/
+build/
 coverage/
 .vite/
 .cache/
+.parcel-cache
+.next/
+.nuxt/
+.turbo/
+.out/
+.storybook-out/
 
-# Logs
+# === LOGS ===
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-*.log
+lerna-debug.log*
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Env files
-.env
-.env.*.local
-
-# Editor
-.idea/
-.vs/
-
-node_modules
-/.pnp
-.pnp.js
-
-# Production
-/dist
-/build
-
-# Environment variables
+# === ENVIRONMENT FILES ===
 .env
 .env.local
+.env.*.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# IDE
-.vscode/settings.json
+# === EDITOR & IDE ===
 .idea/
+.vs/
+.vscode/settings.json
 *.swp
 *.swo
+*~
 
-# OS
+# === OS FILES ===
 .DS_Store
 .DS_Store?
 ._*
@@ -56,81 +53,47 @@ node_modules
 ehthumbs.db
 Thumbs.db
 
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Runtime data
-pids
+# === RUNTIME DATA ===
+pids/
 *.pid
 *.seed
 *.pid.lock
 
-# Coverage directory used by tools like istanbul
-coverage
+# === TEST COVERAGE ===
+coverage/
 *.lcov
+.nyc_output/
 
-# nyc test coverage
-.nyc_output
-
-# ESLint cache
+# === CACHE FILES ===
 .eslintcache
-
-# Microbundle cache
+.npm/
+.yarn-integrity
 .rpt2_cache/
 .rts2_cache_cjs/
 .rts2_cache_es/
 .rts2_cache_umd/
+*.cache
+*.temp
+*.tmp
 
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Optional REPL history
+# === BUILD ARTIFACTS ===
+*.tgz
 .node_repl_history
 
-# Output of 'npm pack'
-*.tgz
+# === BACKUP FILES ===
+*.bak
+*.backup
+*.old
 
-# Yarn Integrity file
-.yarn-integrity
-
-# parcel-bundler cache (https://parceljs.org/)
-.cache
-.parcel-cache
-
-# Next.js build output
-.next
-
-# Nuxt.js build / generate output
-.nuxt
-dist
-
-# Storybook build outputs
-.out
-.storybook-out
-
-# Temporary folders
+# === TEMPORARY FILES ===
 tmp/
 temp/
+saveImage/
 
-# Editor directories and files
-.vscode/*
+# === DEPLOYMENT ===
+.vercel/
+
+# === KEEP SPECIFIC VSCODE FILES ===
 !.vscode/extensions.json
 !.vscode/tasks.json
 !.vscode/launch.json
-!.vscode/settings.json
-
-# Local env files
-.env*.local
-
-# Vercel
-.vercel
-
-# Turbo
-.turbo

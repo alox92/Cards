@@ -2,24 +2,35 @@ import { useState, useEffect } from 'react'
 
 type Theme = 'light' | 'dark'
 
-export const useTheme = () => {
-  const [theme, setTheme] = useState<Theme>(() => {
-    // Vérifier le localStorage pour le thème sauvegardé
-    const savedTheme = localStorage.getItem('ariba-theme') as Theme
-    if (savedTheme) {
-      return savedTheme
+const resolveInitialTheme = (): Theme => {
+  if (typeof window === 'undefined') {
+    return 'light'
+  }
+  try {
+    const saved = window.localStorage.getItem('ariba-theme') as Theme | null
+    if (saved === 'light' || saved === 'dark') {
+      return saved
     }
-    
-    // Utiliser la préférence système si disponible
+  } catch { /* ignore storage access errors */ }
+
+  try {
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       return 'dark'
     }
-    
-    return 'light'
-  })
+  } catch { /* matchMedia may be unavailable */ }
+
+  return 'light'
+}
+
+export const useTheme = () => {
+  const [theme, setTheme] = useState<Theme>(() => resolveInitialTheme())
 
   useEffect(() => {
     // Appliquer le thème au document
+    if (typeof document === 'undefined') {
+      return
+    }
+
     const root = document.documentElement
     const body = document.body
     
@@ -32,7 +43,11 @@ export const useTheme = () => {
     }
     
     // Sauvegarder dans localStorage
-    localStorage.setItem('ariba-theme', theme)
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('ariba-theme', theme)
+      }
+    } catch { /* ignore storage write errors */ }
   }, [theme])
 
   const toggleTheme = () => {

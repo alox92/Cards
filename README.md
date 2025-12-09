@@ -255,6 +255,8 @@ VITE_CACHE_DURATION=3600000
 
 ## 🧪 Tests
 
+![Coverage](./coverage/badge.svg)
+
 ### Tests Unitaires
 ```bash
 npm run test
@@ -262,8 +264,14 @@ npm run test
 
 ### Tests de Couverture
 ```bash
-npm run test:coverage
+npm run test:coverage       # génère aussi coverage/badge.svg
 ```
+
+### Profilage de Tests (optionnel)
+```bash
+TEST_PROFILING=1 npm run test:run
+```
+Le profilage affiche un résumé trié par durée pour cibler les scénarios lents (seuil par défaut 50ms, indicateur 🔥).
 
 ### Tests E2E (à venir)
 ```bash

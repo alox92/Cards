@@ -4,6 +4,9 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { getFluidTransitionMastery, FluidTransitionMastery } from '../../../core/FluidTransitionMastery'
+import { sanitizeRich } from '@/utils/sanitize'
+import { logger } from '@/utils/logger'
+import Icons from '../../components/common/Icons'
 
 interface RichTextEditorProps {
   value: string
@@ -29,7 +32,7 @@ type EditorFeature =
 
 interface FormatButton {
   feature: EditorFeature
-  icon: string
+  icon: React.ReactNode
   label: string
   action: () => void
   isActive?: boolean
@@ -169,7 +172,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         const url = await onImageUpload(file)
         insertHTML(`<img src="${url}" alt="Image" style="max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0;" />`)
       } catch (error) {
-        console.error('Erreur upload image:', error)
+        logger.error('RichTextEditor', 'Erreur upload image', { error })
       }
     } else {
       // Utiliser URL local
@@ -185,7 +188,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         const url = await onAudioUpload(file)
         insertHTML(`<audio controls style="width: 100%; margin: 10px 0;"><source src="${url}" type="${file.type}">Votre navigateur ne supporte pas l'audio.</audio>`)
       } catch (error) {
-        console.error('Erreur upload audio:', error)
+        logger.error('RichTextEditor', 'Erreur upload audio', { error })
       }
     } else {
       const url = URL.createObjectURL(file)
@@ -203,7 +206,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           <a href="${url}" target="_blank" style="color: #3b82f6; text-decoration: underline;">Ouvrir le PDF</a>
         </div>`)
       } catch (error) {
-        console.error('Erreur upload PDF:', error)
+        logger.error('RichTextEditor', 'Erreur upload PDF', { error })
       }
     } else {
       const url = URL.createObjectURL(file)
@@ -401,10 +404,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     { feature: 'strikethrough', icon: 'S̶', label: 'Barré', action: () => formatText('strikethrough'), color: 'from-gray-400 to-gray-600', group: 'format' },
     
     // Couleurs et style
-    { feature: 'color', icon: '🎨', label: 'Couleur de texte', action: () => setShowColorPicker(!showColorPicker), color: 'from-pink-400 to-rose-500', group: 'style' },
-    { feature: 'background', icon: '🖍️', label: 'Surligner', action: () => setShowBackgroundPicker(!showBackgroundPicker), color: 'from-yellow-400 to-orange-400', group: 'style' },
+    { feature: 'color', icon: <Icons.Image size="xs" />, label: 'Couleur de texte', action: () => setShowColorPicker(!showColorPicker), color: 'from-pink-400 to-rose-500', group: 'style' },
+    { feature: 'background', icon: <Icons.Image size="xs" />, label: 'Surligner', action: () => setShowBackgroundPicker(!showBackgroundPicker), color: 'from-yellow-400 to-orange-400', group: 'style' },
     { feature: 'font', icon: '𝒯', label: 'Police', action: () => setShowFontPicker(!showFontPicker), color: 'from-indigo-400 to-purple-500', group: 'style' },
-    { feature: 'size', icon: '📏', label: 'Taille', action: () => setShowSizePicker(!showSizePicker), color: 'from-green-400 to-teal-500', group: 'style' },
+    { feature: 'size', icon: <Icons.Settings size="xs" />, label: 'Taille', action: () => setShowSizePicker(!showSizePicker), color: 'from-green-400 to-teal-500', group: 'style' },
     
     // Structure
     { feature: 'heading', icon: '𝐇₁', label: 'Titre', action: () => formatText('formatBlock', 'h2'), color: 'from-slate-400 to-slate-600', group: 'structure' },
@@ -419,10 +422,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     { feature: 'orderedlist', icon: '1.', label: 'Liste numérotée', action: () => formatText('insertOrderedList'), color: 'from-green-400 to-emerald-500', group: 'list' },
     
     // Médias
-    { feature: 'image', icon: '🖼️', label: 'Image', action: () => handleFileSelect('image'), color: 'from-blue-400 to-indigo-500', group: 'media' },
-    { feature: 'audio', icon: '🎵', label: 'Audio', action: () => handleFileSelect('audio'), color: 'from-purple-400 to-violet-500', group: 'media' },
-    { feature: 'pdf', icon: '📄', label: 'PDF', action: () => handleFileSelect('pdf'), color: 'from-red-400 to-rose-500', group: 'media' },
-    { feature: 'link', icon: '🔗', label: 'Lien', action: insertLink, color: 'from-blue-400 to-cyan-500', group: 'media' },
+    { feature: 'image', icon: <Icons.Image size="xs" />, label: 'Image', action: () => handleFileSelect('image'), color: 'from-blue-400 to-indigo-500', group: 'media' },
+    { feature: 'audio', icon: <Icons.File size="xs" />, label: 'Audio', action: () => handleFileSelect('audio'), color: 'from-purple-400 to-violet-500', group: 'media' },
+    { feature: 'pdf', icon: <Icons.File size="xs" />, label: 'PDF', action: () => handleFileSelect('pdf'), color: 'from-red-400 to-rose-500', group: 'media' },
+    { feature: 'link', icon: <Icons.Settings size="xs" />, label: 'Lien', action: insertLink, color: 'from-blue-400 to-cyan-500', group: 'media' },
     
     // Outils
     { feature: 'emoji', icon: '😊', label: 'Emoji', action: () => setShowEmojiPicker(!showEmojiPicker), color: 'from-yellow-400 to-orange-400', group: 'tools' },
@@ -463,9 +466,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   ]
 
   const tabs = [
-    { id: 'format', label: 'Format', icon: '📝' },
-    { id: 'insert', label: 'Insérer', icon: '➕' },
-    { id: 'tools', label: 'Outils', icon: '🔧' }
+    { id: 'format', label: 'Format', icon: <Icons.Edit size="xs" /> },
+    { id: 'insert', label: 'Insérer', icon: <Icons.Add size="xs" /> },
+    { id: 'tools', label: 'Outils', icon: <Icons.Settings size="xs" /> }
   ]
 
   return (
@@ -769,9 +772,20 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       <div
         ref={editorRef}
         className="ultra-editor-content"
-        contentEditable
+  contentEditable
         dangerouslySetInnerHTML={{ __html: content }}
-        onInput={handleInput}
+  onInput={(e)=> {
+    handleInput(e)
+    try {
+      const el = e.currentTarget as HTMLElement
+      const clean = sanitizeRich(el.innerHTML)
+      if (clean !== el.innerHTML) {
+        el.innerHTML = clean
+      }
+    } catch {
+      /* ignore sanitization errors */
+    }
+  }}
         onKeyDown={handleKeyDown}
         data-placeholder={placeholder}
         suppressContentEditableWarning
@@ -781,22 +795,24 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       <div className="ultra-status-bar">
         <div className="status-left">
           <div className="word-stats">
-            <span className="stat-item">
-              📝 {wordCount} mots
+            <span className="stat-item flex items-center gap-1">
+              <Icons.Edit size="xs" />
+              {wordCount} mots
             </span>
             <span className="stat-item">
               🔤 {charCount} caractères
             </span>
-            <span className={`stat-item ${charCount > maxLength * 0.9 ? 'warning' : ''}`}>
-              📊 {Math.round((charCount / maxLength) * 100)}%
+            <span className={`stat-item flex items-center gap-1 ${charCount > maxLength * 0.9 ? 'warning' : ''}`}>
+              <Icons.Stats size="xs" />
+              {Math.round((charCount / maxLength) * 100)}%
             </span>
           </div>
         </div>
         
         <div className="status-center">
           <div className="feature-indicators">
-            {content.includes('<img') && <span className="indicator media">🖼️</span>}
-            {content.includes('<audio') && <span className="indicator media">🎵</span>}
+            {content.includes('<img') && <span className="indicator media flex items-center gap-1"><Icons.Image size="xs" /></span>}
+            {content.includes('<audio') && <span className="indicator media flex items-center gap-1"><Icons.File size="xs" /></span>}
             {content.includes('href=') && <span className="indicator link">🔗</span>}
             {content.includes('<table') && <span className="indicator table">⚏</span>}
             {/[\u{1F300}-\u{1F9FF}]/u.test(content) && <span className="indicator emoji">😊</span>}

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mode hors‑ligne • Cards</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin:0; padding:2rem; background:#0f172a; color:#f1f5f9; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+    .box { max-width:480px; text-align:center; }
+    h1 { font-size:1.4rem; margin-bottom:.75rem; }
+    p { line-height:1.4; opacity:.85 }
+    button { margin-top:1rem; background:#2563eb; color:#fff; border:none; padding:.75rem 1.25rem; border-radius:6px; font-size:.95rem; cursor:pointer; }
+    button:focus { outline:3px solid #93c5fd; outline-offset:2px }
+  </style>
+</head>
+<body>
+  <div class="box" role="alert" aria-live="polite">
+    <h1>📡 Hors‑ligne</h1>
+    <p>L'application n'a pas pu charger cette page. Vous pouvez continuer à réviser les cartes déjà en cache ou réessayer quand la connexion revient.</p>
+    <button onclick="location.reload()">Réessayer</button>
+  </div>
+</body>
+</html>
